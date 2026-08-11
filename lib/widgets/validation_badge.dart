@@ -110,7 +110,7 @@ class ValidationBadgeCard extends StatelessWidget {
 
           // Required Fields Status List
           Text(
-            'Required Columns Verification (5/5 Required):',
+            'Required Columns Verification (${result.foundFields.length}/${result.requiredFields.length} Required):',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -192,7 +192,7 @@ class ValidationBadgeCard extends StatelessWidget {
           if (isValid) ...[
             const SizedBox(height: 12),
             Text(
-              '🎉 All 5 required fields present & all records unique! ${result.totalRows} panel records loaded.',
+              '🎉 All required fields present & all records unique! ${result.totalRows} panel records loaded.',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,

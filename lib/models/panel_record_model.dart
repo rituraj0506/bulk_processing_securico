@@ -1,21 +1,34 @@
 class PanelRecord {
   final String sNo;
   final String panelSimNumber;
-  final String panelName;
+  final String simImsi;
+  final String zone;
+  final String region;
+  final String branch;
   String adminCode;
-  final String siteAddress;
+  final String panelType;
 
   PanelRecord({
     required String sNo,
     required String panelSimNumber,
-    required String panelName,
+    required String simImsi,
+    required String zone,
+    required String region,
+    required String branch,
     required String adminCode,
-    required String siteAddress,
+    required String panelType,
   })  : sNo = cleanNumberString(sNo),
         panelSimNumber = cleanNumberString(panelSimNumber),
-        panelName = cleanNumberString(panelName),
+        simImsi = cleanNumberString(simImsi),
+        zone = zone.trim(),
+        region = region.trim(),
+        branch = branch.trim(),
         adminCode = cleanNumberString(adminCode),
-        siteAddress = siteAddress.trim();
+        panelType = panelType.trim();
+
+  // Backward compatibility getters
+  String get panelName => branch.isNotEmpty ? '$branch ($panelType)' : (panelType.isNotEmpty ? panelType : 'Panel');
+  String get siteAddress => [branch, region, zone].where((s) => s.isNotEmpty).join(', ');
 
   static String cleanNumberString(String val) {
     String str = val.trim();
@@ -32,35 +45,47 @@ class PanelRecord {
           runtimeType == other.runtimeType &&
           sNo == other.sNo &&
           panelSimNumber == other.panelSimNumber &&
-          panelName == other.panelName &&
+          simImsi == other.simImsi &&
+          zone == other.zone &&
+          region == other.region &&
+          branch == other.branch &&
           adminCode == other.adminCode &&
-          siteAddress == other.siteAddress;
+          panelType == other.panelType;
 
   @override
   int get hashCode =>
       sNo.hashCode ^
       panelSimNumber.hashCode ^
-      panelName.hashCode ^
+      simImsi.hashCode ^
+      zone.hashCode ^
+      region.hashCode ^
+      branch.hashCode ^
       adminCode.hashCode ^
-      siteAddress.hashCode;
+      panelType.hashCode;
 
   Map<String, dynamic> toMap() {
     return {
       'sNo': sNo,
       'panelSimNumber': panelSimNumber,
-      'panelName': panelName,
+      'simImsi': simImsi,
+      'zone': zone,
+      'region': region,
+      'branch': branch,
       'adminCode': adminCode,
-      'siteAddress': siteAddress,
+      'panelType': panelType,
     };
   }
 
   factory PanelRecord.fromMap(Map<dynamic, dynamic> map) {
     return PanelRecord(
       sNo: cleanNumberString(map['sNo']?.toString() ?? ''),
-      panelSimNumber: cleanNumberString(map['panelSimNumber']?.toString() ?? ''),
-      panelName: cleanNumberString(map['panelName']?.toString() ?? ''),
+      panelSimNumber: cleanNumberString(map['panelSimNumber']?.toString() ?? map['simNumber']?.toString() ?? ''),
+      simImsi: cleanNumberString(map['simImsi']?.toString() ?? map['imsi']?.toString() ?? ''),
+      zone: map['zone']?.toString() ?? '',
+      region: map['region']?.toString() ?? '',
+      branch: map['branch']?.toString() ?? map['panelName']?.toString() ?? '',
       adminCode: cleanNumberString(map['adminCode']?.toString() ?? ''),
-      siteAddress: map['siteAddress']?.toString() ?? '',
+      panelType: map['panelType']?.toString() ?? 'A1',
     );
   }
 }

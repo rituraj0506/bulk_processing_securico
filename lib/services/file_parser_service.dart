@@ -7,13 +7,16 @@ import 'package:flutter/foundation.dart';
 import '../models/panel_record_model.dart';
 
 class FileParserService {
-  // Required 5 canonical fields specified by requirement
+  // Required 8 canonical fields from Excel screenshot format
   static const List<String> requiredCanonicalFields = [
-    'S No',
-    'Panel Sim Number',
-    'Panel Name',
+    'S.No',
+    'Sim Numbers',
+    'SIM_IMSI',
+    'Zone',
+    'Region',
+    'Branch',
     'Admin Code',
-    'Site Address',
+    'Panel Type',
   ];
 
   static String sanitizeCellValue(dynamic cellValue) {
@@ -48,43 +51,68 @@ class FileParserService {
   static String? matchCanonicalField(String rawHeader) {
     final norm = normalizeHeader(rawHeader);
 
-    // 1. S No matching
+    // 1. S.No matching
     if (norm == 'sno' ||
         norm == 'sno.' ||
         norm == 's.no' ||
+        norm == 'sno' ||
         norm == 'slno' ||
         norm == 'srno' ||
         norm == 'serialno' ||
         norm == 'serialnumber') {
-      return 'S No';
+      return 'S.No';
     }
 
-    // 2. Panel Sim Number matching
-    if (norm == 'panelsimnumber' ||
+    // 2. Sim Numbers matching
+    if (norm == 'simnumbers' ||
+        norm == 'simnumber' ||
+        norm == 'simnos' ||
+        norm == 'simno' ||
+        norm == 'panelsimnumber' ||
         norm == 'panelsimno' ||
-        norm == 'panelsim' ||
-        (norm.contains('panel') && norm.contains('sim'))) {
-      return 'Panel Sim Number';
+        norm == 'sim') {
+      return 'Sim Numbers';
     }
 
-    // 3. Panel Name matching
-    if (norm == 'panelname' ||
-        (norm.contains('panel') && norm.contains('name'))) {
-      return 'Panel Name';
+    // 3. SIM_IMSI matching
+    if (norm == 'simimsi' ||
+        norm == 'sim_imsi' ||
+        norm == 'imsi' ||
+        norm == 'simimsi') {
+      return 'SIM_IMSI';
     }
 
-    // 4. Admin Code matching
+    // 4. Zone matching
+    if (norm == 'zone' || norm.contains('zone')) {
+      return 'Zone';
+    }
+
+    // 5. Region matching
+    if (norm == 'region' || norm.contains('region')) {
+      return 'Region';
+    }
+
+    // 6. Branch matching
+    if (norm == 'branch' ||
+        norm == 'branchname' ||
+        norm == 'panelname' ||
+        norm.contains('branch')) {
+      return 'Branch';
+    }
+
+    // 7. Admin Code matching
     if (norm == 'admincode' ||
+        norm == 'admincode' ||
         (norm.contains('admin') && norm.contains('code'))) {
       return 'Admin Code';
     }
 
-    // 5. Site Address matching
-    if (norm == 'siteaddress' ||
-        norm == 'siteaddr' ||
-        (norm.contains('site') && norm.contains('address')) ||
-        norm == 'address') {
-      return 'Site Address';
+    // 8. Panel Type matching
+    if (norm == 'paneltype' ||
+        norm == 'panel_type' ||
+        norm == 'panel' ||
+        norm.contains('type')) {
+      return 'Panel Type';
     }
 
     return null;
@@ -203,32 +231,36 @@ class FileParserService {
           return '';
         }
 
-        final sNoVal = getColValue('S No');
-        final simVal = getColValue('Panel Sim Number');
-        final nameVal = getColValue('Panel Name');
+        final sNoVal = getColValue('S.No');
+        final simVal = getColValue('Sim Numbers');
+        final imsiVal = getColValue('SIM_IMSI');
+        final zoneVal = getColValue('Zone');
+        final regionVal = getColValue('Region');
+        final branchVal = getColValue('Branch');
         final adminVal = getColValue('Admin Code');
-        final siteVal = getColValue('Site Address');
+        final panelTypeVal = getColValue('Panel Type');
 
-        // Only add if at least one column is non-empty
         if (sNoVal.isNotEmpty ||
             simVal.isNotEmpty ||
-            nameVal.isNotEmpty ||
-            adminVal.isNotEmpty ||
-            siteVal.isNotEmpty) {
+            imsiVal.isNotEmpty ||
+            branchVal.isNotEmpty ||
+            adminVal.isNotEmpty) {
           records.add(PanelRecord(
             sNo: sNoVal,
             panelSimNumber: simVal,
-            panelName: nameVal,
+            simImsi: imsiVal.isNotEmpty ? imsiVal : 'N/A',
+            zone: zoneVal,
+            region: regionVal,
+            branch: branchVal,
             adminCode: adminVal,
-            siteAddress: siteVal,
+            panelType: panelTypeVal.isNotEmpty ? panelTypeVal : 'A1',
           ));
         }
       }
 
-      // Perform Uniqueness Validation for Panel Sim Number & S No
+      // Uniqueness Validation for Sim Numbers & S.No
       final List<String> duplicateErrors = [];
 
-      // 1. Check Panel Sim Number uniqueness across rows
       final Map<String, List<String>> simToSNos = {};
       for (var record in records) {
         final sim = record.panelSimNumber.trim();
@@ -241,17 +273,16 @@ class FileParserService {
       final List<String> simDuplicateMsgs = [];
       simToSNos.forEach((sim, sNos) {
         if (sNos.length > 1) {
-          simDuplicateMsgs.add('S No ${sNos.join(" and S No ")} have the same Panel SIM number ($sim)');
+          simDuplicateMsgs.add('S.No ${sNos.join(" and S.No ")} have duplicate SIM ($sim)');
         }
       });
 
       if (simDuplicateMsgs.isNotEmpty) {
         duplicateErrors.add(
-          'Panel SIM number is not unique. For example: ${simDuplicateMsgs.join("; ")}. Please correct and re-upload file.',
+          'SIM Number is not unique. Details: ${simDuplicateMsgs.join("; ")}',
         );
       }
 
-      // 2. Check S No uniqueness across rows
       final Map<String, List<int>> sNoToRowIndices = {};
       for (int idx = 0; idx < records.length; idx++) {
         final sNo = records[idx].sNo.trim();
@@ -263,22 +294,21 @@ class FileParserService {
       final List<String> sNoDuplicateMsgs = [];
       sNoToRowIndices.forEach((sNo, rowsList) {
         if (rowsList.length > 1) {
-          sNoDuplicateMsgs.add('S No "$sNo" appears multiple times (rows ${rowsList.join(", ")})');
+          sNoDuplicateMsgs.add('S.No "$sNo" appears multiple times (rows ${rowsList.join(", ")})');
         }
       });
 
       if (sNoDuplicateMsgs.isNotEmpty) {
         duplicateErrors.add(
-          'Serial Number (S No) is not unique. For example: ${sNoDuplicateMsgs.join("; ")}. Please correct and re-upload file.',
+          'Serial Number (S.No) is not unique: ${sNoDuplicateMsgs.join("; ")}',
         );
       }
 
-      // Final validity check: all required headers must exist AND no duplicates allowed!
       final bool isValid = missingFields.isEmpty && duplicateErrors.isEmpty;
 
       String? finalErrorMessage;
       if (missingFields.isNotEmpty) {
-        finalErrorMessage = 'Missing required field(s): ${missingFields.join(", ")}. Please ensure your spreadsheet has all 5 exact column headers.';
+        finalErrorMessage = 'Missing required field(s): ${missingFields.join(", ")}. Please ensure your spreadsheet contains all screenshot headers (S.No, Sim Numbers, SIM_IMSI, Zone, Region, Branch, Admin Code, Panel Type).';
       } else if (duplicateErrors.isNotEmpty) {
         finalErrorMessage = duplicateErrors.join('\n\n');
       }

@@ -374,7 +374,7 @@ class ConfirmAdminCodeDialog extends StatelessWidget {
   }
 }
 
-/// Step 2 Dialog: 100% Background SMS Dispatcher with Responsive Dynamic Overflow Prevention
+/// Step 2 Dialog: 100% Background SMS Dispatcher with Overflow-Free Responsive Widgets
 class SmsCommandsQueueModal extends StatefulWidget {
   final List<PanelRecord> selectedRecords;
   final String newAdminCode;
@@ -895,8 +895,11 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                         ],
                         const SizedBox(height: 10),
 
-                        // Code Change Transition
-                        Row(
+                        // Code Change Transition wrapped in Wrap to prevent overflow
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               'Current Code: ${item.currentCode}',
@@ -906,9 +909,7 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                                 color: AppColors.textSecondary,
                               ),
                             ),
-                            const SizedBox(width: 6),
                             const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
-                            const SizedBox(width: 6),
                             Text(
                               'New Code: ${item.newCode}',
                               style: GoogleFonts.plusJakartaSans(
