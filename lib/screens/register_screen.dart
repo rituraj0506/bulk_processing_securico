@@ -103,7 +103,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: AppColors.premiumShadow,
                       blurRadius: 30,
                       offset: Offset(0, 10),
-                    )
+                    ),
                   ],
                 ),
                 child: Form(
@@ -148,7 +148,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         controller: _mobNoController,
                         keyboardType: TextInputType.number,
                         maxLength: 10,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return 'Mobile number is required';
@@ -218,7 +220,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           GestureDetector(
                             onTap: () {
                               Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
                               );
                             },
                             child: Text(

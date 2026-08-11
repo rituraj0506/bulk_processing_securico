@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Brand Colors (Modern Indigo / Purple Spectrum)
-  static const Color primary = Color(0xFF6366F1); // Indigo Primary
-  static const Color primaryDark = Color(0xFF4F46E5);
-  static const Color primaryLight = Color(0xFFEEF2FF);
-  static const Color accent = Color(0xFF8B5CF6); // Bright Violet
+  // Primary Brand Colors
+  static const Color primary = Color(0xFFA42E2F);
+  static const Color primaryDark = Color(0xFF732121);
+  static const Color primaryLight = Color(0xFFFBE9E7);
+  static const Color accent = Color(0xFF151515);
 
   // Dark Mode Surface & Card Colors
   static const Color darkBackground = Color(0xFF0F172A); // Slate 900
@@ -35,7 +35,7 @@ class AppColors {
 
   // Borders & Dividers
   static const Color border = Color(0xFFE2E8F0);
-  static const Color borderFocused = Color(0xFF6366F1);
+  static const Color borderFocused = Color(0xFFA42E2F);
   static const Color divider = Color(0xFFF1F5F9);
 
   // Input Field
@@ -43,11 +43,11 @@ class AppColors {
 
   // Shadow
   static const Color shadow = Color(0x14000000);
-  static const Color premiumShadow = Color(0x1F6366F1);
+  static const Color premiumShadow = Color(0x1FA42E2F);
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+    colors: [Color(0xFFA42E2F), Color(0xFF732121)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -65,7 +65,7 @@ class AppColors {
   );
 
   static const LinearGradient heroGradient = LinearGradient(
-    colors: [Color(0xFF1E1B4B), Color(0xFF312E81), Color(0xFF4338CA)],
+    colors: [Color(0xFF151515), Color(0xFF3D1414), Color(0xFF732121)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

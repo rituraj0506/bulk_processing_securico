@@ -6,11 +6,10 @@ import '../models/panel_record_model.dart';
 import '../services/file_parser_service.dart';
 import '../services/hive_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/data_table_view.dart';
 import '../widgets/file_upload_zone.dart';
-import '../widgets/stats_card.dart';
 import '../widgets/validation_badge.dart';
 import 'login_screen.dart';
+import 'panel_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,9 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isProcessing = false;
   ValidationResult? _lastValidationResult;
   List<ValidationResult> _uploadHistory = [];
-
-  int _selectedPanelCount = 0;
-  VoidCallback? _triggerChangeAdminCodeFlow;
+  List<PanelRecord> _panelRecords = [];
 
   @override
   void initState() {
@@ -44,6 +41,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (_uploadHistory.isNotEmpty) {
         _lastValidationResult = _uploadHistory.first;
       }
+      _panelRecords = _hiveService.getSavedPanelRecords();
     });
   }
 
@@ -73,7 +71,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _processFile(PlatformFile file) async {
     setState(() => _isProcessing = true);
 
-    final validationResult = await _fileParserService.parseAndValidateFile(file);
+    final validationResult = await _fileParserService.parseAndValidateFile(
+      file,
+    );
     await _hiveService.saveUploadHistory(validationResult);
 
     if (!mounted) return;
@@ -81,17 +81,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isProcessing = false;
       _lastValidationResult = validationResult;
       _uploadHistory = _hiveService.getUploadHistory();
-      _selectedPanelCount = 0;
-      _triggerChangeAdminCodeFlow = null;
+      _panelRecords = _hiveService.getSavedPanelRecords();
     });
   }
 
   Future<void> _logout() async {
     await _hiveService.logout();
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+  }
+
+  void _openPanelList() {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => PanelListScreen(
+              records: _panelRecords,
+              onRecordsUpdated: () async {
+                await _hiveService.savePanelRecordsTable(_panelRecords);
+              },
+            ),
+          ),
+        )
+        .then((_) {
+          // Refresh in case admin codes were changed while on the panel list page.
+          if (mounted) setState(() {});
+        });
   }
 
   void _showHistoryModal() {
@@ -145,7 +162,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ? Center(
                       child: Text(
                         'No upload history yet.',
-                        style: GoogleFonts.plusJakartaSans(color: AppColors.textSecondary),
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     )
                   : ListView.separated(
@@ -159,10 +178,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             side: const BorderSide(color: AppColors.border),
                           ),
                           leading: CircleAvatar(
-                            backgroundColor: item.isValid ? AppColors.successBg : AppColors.errorBg,
+                            backgroundColor: item.isValid
+                                ? AppColors.successBg
+                                : AppColors.errorBg,
                             child: Icon(
                               item.isValid ? Icons.check_circle : Icons.cancel,
-                              color: item.isValid ? AppColors.success : AppColors.error,
+                              color: item.isValid
+                                  ? AppColors.success
+                                  : AppColors.error,
                             ),
                           ),
                           title: Text(
@@ -178,14 +201,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 : 'Invalid • ${item.missingFields.isNotEmpty ? "Missing: ${item.missingFields.join(', ')}" : "Duplicate Data Error"}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
-                              color: item.isValid ? AppColors.success : AppColors.error,
+                              color: item.isValid
+                                  ? AppColors.success
+                                  : AppColors.error,
                             ),
                           ),
                           onTap: () {
                             setState(() {
                               _lastValidationResult = item;
-                              _selectedPanelCount = 0;
-                              _triggerChangeAdminCodeFlow = null;
                             });
                             Navigator.pop(context);
                           },
@@ -202,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final validationResult = _lastValidationResult;
-    final records = validationResult?.records ?? [];
+    final hasPanelData = _panelRecords.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.scaffold,
@@ -216,7 +239,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.analytics_rounded, color: AppColors.primary, size: 22),
+              child: const Icon(
+                Icons.analytics_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Column(
@@ -244,6 +271,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         actions: [
+          if (hasPanelData)
+            IconButton(
+              icon: const Icon(
+                Icons.cloud_upload_rounded,
+                color: AppColors.primary,
+              ),
+              tooltip: 'Upload New File',
+              onPressed: _isProcessing ? null : _pickAndProcessFile,
+            ),
           IconButton(
             icon: const Icon(Icons.history_rounded, color: AppColors.primary),
             tooltip: 'Upload History',
@@ -257,100 +293,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _selectedPanelCount > 0
-          ? Container(
-              constraints: const BoxConstraints(maxWidth: 460),
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4F46E5).withValues(alpha: 0.45),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 8),
-                  )
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(30),
-                  onTap: () => _triggerChangeAdminCodeFlow?.call(),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.password_rounded, color: Colors.white, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Change Admin Code',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                Text(
-                                  '$_selectedPanelCount panel(s) selected',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Proceed',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: AppColors.primaryDark,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primaryDark),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            )
-          : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Center(
@@ -359,49 +301,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // File Upload Zone
-                FileUploadZone(
-                  onSelectFile: _pickAndProcessFile,
-                  isUploading: _isProcessing,
-                  selectedFileName: validationResult?.fileName,
-                ),
-                const SizedBox(height: 20),
-
-                // If a file was uploaded:
-                if (validationResult != null) ...[
-                  // Format status card
-                  ValidationBadgeCard(result: validationResult),
-                  const SizedBox(height: 20),
-
-                  // If valid file -> show stats cards & data table details
-                  if (validationResult.isValid && records.isNotEmpty) ...[
-                    StatsSummaryRow(
-                      totalRecords: records.length,
-                    ),
+                if (!hasPanelData) ...[
+                  _SectionLabel(text: 'UPLOAD PANEL DATA'),
+                  const SizedBox(height: 10),
+                  FileUploadZone(
+                    onSelectFile: _pickAndProcessFile,
+                    isUploading: _isProcessing,
+                    selectedFileName: validationResult?.fileName,
+                  ),
+                  if (validationResult != null &&
+                      !validationResult.isValid) ...[
                     const SizedBox(height: 20),
-
-                    DataTableView(
-                      key: ValueKey('data_table_${validationResult.fileName}_${records.length}'),
-                      records: records,
-                      onRecordsUpdated: () async {
-                        await _hiveService.saveUploadHistory(validationResult);
-                        setState(() {});
-                      },
-                      onSelectionChanged: (count, triggerFlow) {
-                        setState(() {
-                          _selectedPanelCount = count;
-                          _triggerChangeAdminCodeFlow = triggerFlow;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 60),
+                    ValidationBadgeCard(result: validationResult),
                   ],
+                ] else ...[
+                  if (validationResult != null &&
+                      !validationResult.isValid) ...[
+                    ValidationBadgeCard(result: validationResult),
+                    const SizedBox(height: 20),
+                  ],
+                  _TotalRecordsCard(
+                    totalRecords: _panelRecords.length,
+                    onViewPanelList: _openPanelList,
+                  ),
                 ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+
+  const _SectionLabel({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 14,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Shown once panel data exists: total record count only, plus a button
+/// through to the full Panel List page.
+class _TotalRecordsCard extends StatelessWidget {
+  final int totalRecords;
+  final VoidCallback onViewPanelList;
+
+  const _TotalRecordsCard({
+    required this.totalRecords,
+    required this.onViewPanelList,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.table_rows_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            '$totalRecords',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 42,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            totalRecords == 1 ? 'Total Panel Record' : 'Total Panel Records',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onViewPanelList,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'View Panel List',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 18,
+                      color: AppColors.primaryDark,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

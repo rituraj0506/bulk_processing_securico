@@ -31,7 +31,7 @@ class FileUploadZone extends StatelessWidget {
             color: AppColors.shadow,
             blurRadius: 20,
             offset: Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Material(
@@ -87,47 +87,10 @@ class FileUploadZone extends StatelessWidget {
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _buildTag('Google Sheets / Excel (.xlsx)', Icons.grid_on_rounded, Colors.green),
-                    _buildTag('CSV File (.csv)', Icons.table_chart_rounded, Colors.blue),
-                    _buildTag('PDF Document (.pdf)', Icons.picture_as_pdf_rounded, Colors.red),
-                  ],
-                ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTag(String text, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color.withValues(alpha: 0.9),
-            ),
-          ),
-        ],
       ),
     );
   }

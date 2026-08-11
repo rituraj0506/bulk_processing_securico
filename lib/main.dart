@@ -5,7 +5,7 @@ import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Hive Local Database
   final hiveService = HiveService();
   await hiveService.init();

@@ -42,7 +42,8 @@ class SmsCommandService {
   static Future<bool> requestDefaultSmsRole() async {
     if (Platform.isAndroid) {
       try {
-        final bool res = await _channel.invokeMethod<bool>('requestDefaultSmsRole') ?? false;
+        final bool res =
+            await _channel.invokeMethod<bool>('requestDefaultSmsRole') ?? false;
         return res;
       } catch (_) {
         return false;
@@ -51,7 +52,9 @@ class SmsCommandService {
     return false;
   }
 
-  /// Requests runtime permission and sends the SMS silently via native SmsManager with detailed error reporting & 6s timeout safeguard
+  /// Requests runtime permission and fires the SMS via native SmsManager.
+  /// Fire-and-forget: only confirms the OS accepted the send request, not
+  /// that it was delivered.
   static Future<SmsSendResult> sendSilentSms({
     required String phoneNumber,
     required String message,
@@ -64,49 +67,24 @@ class SmsCommandService {
         if (!requestResult.isGranted) {
           return SmsSendResult(
             isSuccess: false,
-            errorMessage: 'SMS Permission Denied by User. Please grant SMS permission in phone settings.',
+            errorMessage:
+                'SMS Permission Denied by User. Please grant SMS permission in phone settings.',
           );
         }
       }
 
-      // 2. Invoke the native SmsManager via MethodChannel with 6s timeout safeguard
+      // 2. Fire the SMS via the native SmsManager and return immediately
       try {
-        final String? result = await _channel.invokeMethod<String>('sendSMS', {
+        await _channel.invokeMethod<String>('sendSMS', {
           'phone': phoneNumber.replaceAll(RegExp(r'[^\d+]'), ''),
           'message': message,
-        }).timeout(const Duration(seconds: 6), onTimeout: () {
-          return 'TIMEOUT_SAFEGUARD';
         });
-
-        if (result == 'SUCCESS') {
-          return SmsSendResult(isSuccess: true);
-        } else if (result == 'TIMEOUT_SAFEGUARD') {
-          return SmsSendResult(
-            isSuccess: false,
-            errorMessage: 'Background SMS dispatch timed out (6s). Check active SIM network signal.',
-          );
-        } else {
-          return SmsSendResult(
-            isSuccess: false,
-            errorMessage: 'Background SMS dispatch failed',
-          );
-        }
+        return SmsSendResult(isSuccess: true);
       } on PlatformException catch (e) {
-        final code = e.code;
-        final msg = e.message ?? code;
-        final isRoleReq = msg.contains('ERROR_16_DEFAULT_SMS_REQUIRED') || code.contains('MODEM_ERROR_16');
-        return SmsSendResult(
-          isSuccess: false,
-          errorMessage: isRoleReq
-              ? 'Android Security Policy (Error 16): Default SMS App role or manual SMS dispatch required.'
-              : msg,
-          requiresSmsAppRole: isRoleReq,
-        );
+        final msg = e.message ?? e.code;
+        return SmsSendResult(isSuccess: false, errorMessage: msg);
       } catch (e) {
-        return SmsSendResult(
-          isSuccess: false,
-          errorMessage: 'Error: $e',
-        );
+        return SmsSendResult(isSuccess: false, errorMessage: 'Error: $e');
       }
     } else {
       return SmsSendResult(
@@ -134,7 +112,8 @@ class SmsCommandService {
         newCode: newCode,
         commandBody: 'No Change Admin Code command exists for this model.',
         isSupported: false,
-        warningNote: 'Solitaire 08S GGIP has a permanently fixed admin code (1234) with no SMS path to change it.',
+        warningNote:
+            'Solitaire 08S GGIP has a permanently fixed admin code (1234) with no SMS path to change it.',
       );
     }
 
@@ -153,14 +132,16 @@ class SmsCommandService {
     // 3. ZERO-PADDED STYLE PANELS (DEFENDER FAMILY): SEC GX 4016 GSM A6 4G N, SEC GX 4016 GSM A7 4G N
     // Format: 00[CurrentCode] CHANGE CODE #[NewCode]-[NewCode]* END
     if (panelNameNorm.contains('defender') ||
-        (panelNameNorm.contains('sec gx 4016') && panelNameNorm.contains('4g n'))) {
+        (panelNameNorm.contains('sec gx 4016') &&
+            panelNameNorm.contains('4g n'))) {
       return SmsCommandResult(
         record: record,
         currentCode: currentCode,
         newCode: newCode,
         commandBody: '00$currentCode CHANGE CODE #$newCode-$newCode* END',
         isSupported: true,
-        warningNote: 'Defender Models Warning: Confirm firmware support before relying on this command.',
+        warningNote:
+            'Defender Models Warning: Confirm firmware support before relying on this command.',
       );
     }
 
@@ -184,9 +165,7 @@ class SmsCommandService {
     final uri = Uri(
       scheme: 'sms',
       path: cleanPhone,
-      queryParameters: <String, String>{
-        'body': messageBody,
-      },
+      queryParameters: <String, String>{'body': messageBody},
     );
 
     try {

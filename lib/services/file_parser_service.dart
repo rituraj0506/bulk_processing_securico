@@ -41,10 +41,7 @@ class FileParserService {
   }
 
   static String normalizeHeader(String header) {
-    return header
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .trim();
+    return header.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '').trim();
   }
 
   /// Maps normalized string to canonical field name if matched
@@ -119,18 +116,29 @@ class FileParserService {
   }
 
   Future<ValidationResult> parseAndValidateFile(PlatformFile file) async {
+    debugPrint(
+      '[FileParser] Starting parse for "${file.name}" (extension=${file.extension}, size=${file.size})',
+    );
     try {
       List<List<dynamic>> rows = [];
       Uint8List? bytes = file.bytes;
+      debugPrint(
+        '[FileParser] file.bytes present: ${bytes != null}, file.path: ${file.path}',
+      );
 
       if (bytes == null && file.path != null) {
         final ioFile = File(file.path!);
-        if (await ioFile.exists()) {
+        final exists = await ioFile.exists();
+        debugPrint('[FileParser] Reading from path, exists=$exists');
+        if (exists) {
           bytes = await ioFile.readAsBytes();
         }
       }
 
+      debugPrint('[FileParser] Bytes loaded: ${bytes?.length ?? 0} bytes');
+
       if (bytes == null || bytes.isEmpty) {
+        debugPrint('[FileParser] ERROR: file is empty or unreadable');
         return ValidationResult(
           isValid: false,
           fileName: file.name,
@@ -144,10 +152,13 @@ class FileParserService {
       }
 
       final extension = file.extension?.toLowerCase() ?? '';
+      debugPrint('[FileParser] Detected extension: "$extension"');
 
       if (extension == 'xlsx' || extension == 'xls') {
         rows = _parseExcel(bytes);
-      } else if (extension == 'csv' || extension == 'txt' || extension == 'tsv') {
+      } else if (extension == 'csv' ||
+          extension == 'txt' ||
+          extension == 'tsv') {
         rows = _parseCsv(bytes);
       } else if (extension == 'pdf') {
         rows = _parsePdfTextFallback(bytes);
@@ -155,7 +166,20 @@ class FileParserService {
         rows = _parseCsv(bytes);
       }
 
+      debugPrint('[FileParser] Rows parsed: ${rows.length}');
+      if (rows.isNotEmpty) {
+        for (int i = 0; i < rows.length && i < 3; i++) {
+          debugPrint('[FileParser] Row $i raw: ${rows[i]}');
+        }
+      }
+
       if (rows.isEmpty) {
+        debugPrint(
+          '[FileParser] ERROR: no rows found after parsing (extension=$extension)',
+        );
+        final message = (extension == 'xlsx' || extension == 'xls')
+            ? 'This Excel file could not be read — it appears to be corrupted or was saved by a tool that produced an invalid .xlsx structure. Please open it in Excel/Google Sheets/LibreOffice and re-save it, or export it as .csv and import that instead.'
+            : 'No readable rows or table structure found in file.';
         return ValidationResult(
           isValid: false,
           fileName: file.name,
@@ -164,7 +188,7 @@ class FileParserService {
           foundFields: [],
           missingFields: requiredCanonicalFields,
           records: [],
-          errorMessage: 'No readable rows or table structure found in file.',
+          errorMessage: message,
         );
       }
 
@@ -174,14 +198,21 @@ class FileParserService {
 
       for (int i = 0; i < rows.length; i++) {
         final r = rows[i];
-        if (r.any((cell) => cell != null && sanitizeCellValue(cell).isNotEmpty)) {
+        if (r.any(
+          (cell) => cell != null && sanitizeCellValue(cell).isNotEmpty,
+        )) {
           headerRowIndex = i;
           rawHeaders = r.map((c) => sanitizeCellValue(c)).toList();
           break;
         }
       }
 
+      debugPrint(
+        '[FileParser] Header row index: $headerRowIndex, raw headers: $rawHeaders',
+      );
+
       if (headerRowIndex == -1 || rawHeaders.isEmpty) {
+        debugPrint('[FileParser] ERROR: could not locate header row');
         return ValidationResult(
           isValid: false,
           fileName: file.name,
@@ -208,10 +239,17 @@ class FileParserService {
         }
       }
 
+      debugPrint('[FileParser] Canonical column map: $canonicalColumnIndices');
+      debugPrint('[FileParser] Found canonical fields: $foundCanonicalFields');
+
       // Identify missing required fields
       final List<String> missingFields = requiredCanonicalFields
           .where((field) => !foundCanonicalFields.contains(field))
           .toList();
+
+      if (missingFields.isNotEmpty) {
+        debugPrint('[FileParser] Missing fields: $missingFields');
+      }
 
       // Extract data rows if headers matched
       final List<PanelRecord> records = [];
@@ -219,8 +257,15 @@ class FileParserService {
 
       for (int i = dataStartRow; i < rows.length; i++) {
         final row = rows[i];
-        if (row.every((cell) => cell == null || sanitizeCellValue(cell).isEmpty)) {
-          continue; // skip blank rows
+        if (row.every(
+          (cell) => cell == null || sanitizeCellValue(cell).isEmpty,
+        )) {
+          // A fully blank row marks the end of the data table; anything after
+          // (e.g. trailing notes) is not part of the dataset and is ignored.
+          debugPrint(
+            '[FileParser] Blank row at $i — stopping data extraction, ignoring remaining rows.',
+          );
+          break;
         }
 
         String getColValue(String fieldName) {
@@ -240,21 +285,26 @@ class FileParserService {
         final adminVal = getColValue('Admin Code');
         final panelTypeVal = getColValue('Panel Type');
 
-        if (sNoVal.isNotEmpty ||
-            simVal.isNotEmpty ||
-            imsiVal.isNotEmpty ||
-            branchVal.isNotEmpty ||
-            adminVal.isNotEmpty) {
-          records.add(PanelRecord(
-            sNo: sNoVal,
-            panelSimNumber: simVal,
-            simImsi: imsiVal.isNotEmpty ? imsiVal : 'N/A',
-            zone: zoneVal,
-            region: regionVal,
-            branch: branchVal,
-            adminCode: adminVal,
-            panelType: panelTypeVal.isNotEmpty ? panelTypeVal : 'A1',
-          ));
+        // A row must carry the core identifying data (S.No and Sim Number) to
+        // be considered a real record; otherwise it's neglected rather than
+        // imported as a malformed entry.
+        if (sNoVal.isNotEmpty && simVal.isNotEmpty) {
+          records.add(
+            PanelRecord(
+              sNo: sNoVal,
+              panelSimNumber: simVal,
+              simImsi: imsiVal.isNotEmpty ? imsiVal : 'N/A',
+              zone: zoneVal,
+              region: regionVal,
+              branch: branchVal,
+              adminCode: adminVal,
+              panelType: panelTypeVal.isNotEmpty ? panelTypeVal : 'A1',
+            ),
+          );
+        } else {
+          debugPrint(
+            '[FileParser] Row $i skipped — missing required S.No/Sim Number data: $row',
+          );
         }
       }
 
@@ -266,14 +316,18 @@ class FileParserService {
         final sim = record.panelSimNumber.trim();
         final sNo = record.sNo.trim();
         if (sim.isNotEmpty) {
-          simToSNos.putIfAbsent(sim, () => []).add(sNo.isNotEmpty ? sNo : 'Unknown SNo');
+          simToSNos
+              .putIfAbsent(sim, () => [])
+              .add(sNo.isNotEmpty ? sNo : 'Unknown SNo');
         }
       }
 
       final List<String> simDuplicateMsgs = [];
       simToSNos.forEach((sim, sNos) {
         if (sNos.length > 1) {
-          simDuplicateMsgs.add('S.No ${sNos.join(" and S.No ")} have duplicate SIM ($sim)');
+          simDuplicateMsgs.add(
+            'S.No ${sNos.join(" and S.No ")} have duplicate SIM ($sim)',
+          );
         }
       });
 
@@ -294,7 +348,9 @@ class FileParserService {
       final List<String> sNoDuplicateMsgs = [];
       sNoToRowIndices.forEach((sNo, rowsList) {
         if (rowsList.length > 1) {
-          sNoDuplicateMsgs.add('S.No "$sNo" appears multiple times (rows ${rowsList.join(", ")})');
+          sNoDuplicateMsgs.add(
+            'S.No "$sNo" appears multiple times (rows ${rowsList.join(", ")})',
+          );
         }
       });
 
@@ -304,14 +360,24 @@ class FileParserService {
         );
       }
 
+      debugPrint('[FileParser] Extracted records: ${records.length}');
+      if (duplicateErrors.isNotEmpty) {
+        debugPrint('[FileParser] Duplicate errors: $duplicateErrors');
+      }
+
       final bool isValid = missingFields.isEmpty && duplicateErrors.isEmpty;
 
       String? finalErrorMessage;
       if (missingFields.isNotEmpty) {
-        finalErrorMessage = 'Missing required field(s): ${missingFields.join(", ")}. Please ensure your spreadsheet contains all screenshot headers (S.No, Sim Numbers, SIM_IMSI, Zone, Region, Branch, Admin Code, Panel Type).';
+        finalErrorMessage =
+            'Missing required field(s): ${missingFields.join(", ")}. Please ensure your spreadsheet contains all screenshot headers (S.No, Sim Numbers, SIM_IMSI, Zone, Region, Branch, Admin Code, Panel Type).';
       } else if (duplicateErrors.isNotEmpty) {
         finalErrorMessage = duplicateErrors.join('\n\n');
       }
+
+      debugPrint(
+        '[FileParser] Result: isValid=$isValid, totalRows=${records.length}, errorMessage=$finalErrorMessage',
+      );
 
       return ValidationResult(
         isValid: isValid,
@@ -323,8 +389,9 @@ class FileParserService {
         records: records,
         errorMessage: finalErrorMessage,
       );
-    } catch (e) {
-      debugPrint('Error parsing file: $e');
+    } catch (e, stackTrace) {
+      debugPrint('[FileParser] EXCEPTION while parsing file: $e');
+      debugPrint('[FileParser] Stack trace:\n$stackTrace');
       return ValidationResult(
         isValid: false,
         fileName: file.name,
@@ -341,9 +408,15 @@ class FileParserService {
   List<List<dynamic>> _parseExcel(Uint8List bytes) {
     try {
       final excel = Excel.decodeBytes(bytes);
+      debugPrint(
+        '[FileParser] Excel decoded. Sheet names: ${excel.tables.keys.toList()}',
+      );
       List<List<dynamic>> rows = [];
       for (var table in excel.tables.keys) {
         final sheet = excel.tables[table];
+        debugPrint(
+          '[FileParser] Sheet "$table" row count: ${sheet?.rows.length ?? 0}',
+        );
         if (sheet != null) {
           for (var row in sheet.rows) {
             final rowValues = row.map((cell) => cell?.value).toList();
@@ -353,8 +426,9 @@ class FileParserService {
         if (rows.isNotEmpty) break;
       }
       return rows;
-    } catch (e) {
-      debugPrint('Excel parse error: $e');
+    } catch (e, stackTrace) {
+      debugPrint('[FileParser] Excel parse EXCEPTION: $e');
+      debugPrint('[FileParser] Stack trace:\n$stackTrace');
       return [];
     }
   }
@@ -367,8 +441,10 @@ class FileParserService {
       } catch (_) {
         content = latin1.decode(bytes);
       }
-      return const CsvToListConverter(eol: '\n', shouldParseNumbers: false)
-          .convert(content);
+      return const CsvToListConverter(
+        eol: '\n',
+        shouldParseNumbers: false,
+      ).convert(content);
     } catch (e) {
       debugPrint('CSV parse error: $e');
       return [];

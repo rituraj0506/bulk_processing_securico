@@ -76,7 +76,9 @@ class HiveService {
 
   UserModel? getCurrentUser() {
     final cleanMob = _sessionBox?.get('currentUserMob');
-    if (cleanMob != null && _usersBox != null && _usersBox!.containsKey(cleanMob)) {
+    if (cleanMob != null &&
+        _usersBox != null &&
+        _usersBox!.containsKey(cleanMob)) {
       final userData = _usersBox!.get(cleanMob);
       if (userData is Map) {
         return UserModel.fromMap(userData);
@@ -139,7 +141,9 @@ class HiveService {
     final key = 'panels_$cleanMob';
     final recordsMapList = records.map((r) => r.toMap()).toList();
     await _panelsBox!.put(key, recordsMapList);
-    debugPrint('Saved ${records.length} records into Hive table "panels_box" under key "$key"');
+    debugPrint(
+      'Saved ${records.length} records into Hive table "panels_box" under key "$key"',
+    );
   }
 
   List<PanelRecord> getSavedPanelRecords() {

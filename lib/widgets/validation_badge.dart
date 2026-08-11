@@ -6,10 +6,7 @@ import '../theme/app_colors.dart';
 class ValidationBadgeCard extends StatelessWidget {
   final ValidationResult result;
 
-  const ValidationBadgeCard({
-    super.key,
-    required this.result,
-  });
+  const ValidationBadgeCard({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +24,12 @@ class ValidationBadgeCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: (isValid ? AppColors.success : AppColors.error).withValues(alpha: 0.12),
+            color: (isValid ? AppColors.success : AppColors.error).withValues(
+              alpha: 0.12,
+            ),
             blurRadius: 16,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -67,14 +66,21 @@ class ValidationBadgeCard extends StatelessWidget {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: isValid ? AppColors.success : AppColors.error,
+                            color: isValid
+                                ? AppColors.success
+                                : AppColors.error,
                             letterSpacing: 0.3,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: (isValid ? AppColors.success : AppColors.error).withValues(alpha: 0.15),
+                            color:
+                                (isValid ? AppColors.success : AppColors.error)
+                                    .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -82,7 +88,9 @@ class ValidationBadgeCard extends StatelessWidget {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: isValid ? AppColors.success : AppColors.error,
+                              color: isValid
+                                  ? AppColors.success
+                                  : AppColors.error,
                             ),
                           ),
                         ),
@@ -125,7 +133,10 @@ class ValidationBadgeCard extends StatelessWidget {
             children: result.requiredFields.map((field) {
               final isFound = result.foundFields.contains(field);
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
@@ -138,7 +149,9 @@ class ValidationBadgeCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isFound ? Icons.check_circle : Icons.error_outline_rounded,
+                      isFound
+                          ? Icons.check_circle
+                          : Icons.error_outline_rounded,
                       size: 14,
                       color: isFound ? AppColors.success : AppColors.error,
                     ),
@@ -158,7 +171,9 @@ class ValidationBadgeCard extends StatelessWidget {
           ),
 
           // Display Error Message if file is invalid (Missing fields or Duplicate data)
-          if (!isValid && result.errorMessage != null && result.errorMessage!.isNotEmpty) ...[
+          if (!isValid &&
+              result.errorMessage != null &&
+              result.errorMessage!.isNotEmpty) ...[
             const SizedBox(height: 14),
             Container(
               width: double.infinity,
@@ -166,12 +181,19 @@ class ValidationBadgeCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.4), width: 1.2),
+                border: Border.all(
+                  color: AppColors.error.withValues(alpha: 0.4),
+                  width: 1.2,
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.error,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -199,7 +221,7 @@ class ValidationBadgeCard extends StatelessWidget {
                 color: AppColors.success,
               ),
             ),
-          ]
+          ],
         ],
       ),
     );

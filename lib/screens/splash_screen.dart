@@ -30,9 +30,9 @@ class _SplashScreenState extends State<SplashScreen> {
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
     }
   }
 
@@ -40,51 +40,58 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.primaryGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.insert_chart_outlined_rounded,
-                    size: 52,
-                    color: Colors.white,
-                  ),
-                ),
-              )
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.insert_chart_outlined_rounded,
+                        size: 52,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
                   .animate()
                   .scale(duration: 600.ms, curve: Curves.easeOutBack)
                   .fade(duration: 600.ms),
               const SizedBox(height: 24),
               Text(
-                'Bulk Sheet Validator',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
-                ),
-              ).animate().slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 200.ms).fade(),
+                    'Bulk Sheet Validator',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  )
+                  .animate()
+                  .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 200.ms)
+                  .fade(),
               const SizedBox(height: 8),
               Text(
-                'Mobile Database & File Engine',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-              ).animate().slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 400.ms).fade(),
+                    'Mobile Database & File Engine',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  )
+                  .animate()
+                  .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 400.ms)
+                  .fade(),
               const SizedBox(height: 48),
               const SizedBox(
                 width: 32,

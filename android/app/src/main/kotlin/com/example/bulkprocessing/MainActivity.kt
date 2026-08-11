@@ -1,16 +1,10 @@
 package com.example.bulkprocessing
 
-import android.app.Activity
-import android.app.PendingIntent
 import android.app.role.RoleManager
-import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.Telephony
 import android.telephony.SmsManager
 import android.telephony.SubscriptionManager
@@ -21,7 +15,6 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "db_channel"
-    private val SENT_ACTION = "SMS_SENT_ACTION"
     private val TAG = "SMS_BACKGROUND_DEBUG"
 
     private fun writeSmsToSentBox(context: Context, phone: String, message: String) {
@@ -57,108 +50,15 @@ class MainActivity : FlutterActivity() {
                         return@setMethodCallHandler
                     }
 
-                    Log.d(TAG, "Attempting background SMS dispatch to: $phone | Message: $message")
-                    println("[$TAG] Starting background SMS send to: $phone")
+                    Log.d(TAG, "Dispatching SMS (fire-and-forget) to: $phone | Message: $message")
+                    println("[$TAG] Firing SMS to: $phone")
 
                     // Save sent SMS to native Messages App DB immediately
                     writeSmsToSentBox(context, phone, message)
 
-                    val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-                    } else {
-                        PendingIntent.FLAG_ONE_SHOT
-                    }
-
-                    val sentIntent = PendingIntent.getBroadcast(
-                        context,
-                        0,
-                        Intent(SENT_ACTION),
-                        flags
-                    )
-
-                    var isResultReturned = false
-                    val mainHandler = Handler(Looper.getMainLooper())
-
-                    val timeoutRunnable = Runnable {
-                        if (!isResultReturned) {
-                            isResultReturned = true
-                            Log.w(TAG, "SMS modem callback pending after 3.5 seconds. Assuming dispatched to carrier queue for $phone")
-                            println("[$TAG] DISPATCHED: Modem accepted payload for $phone")
-                            result.success("SUCCESS")
-                        }
-                    }
-
-                    val sentReceiver = object : BroadcastReceiver() {
-                        override fun onReceive(arg0: Context?, arg1: Intent?) {
-                            mainHandler.removeCallbacks(timeoutRunnable)
-                            if (!isResultReturned) {
-                                isResultReturned = true
-                                try {
-                                    unregisterReceiver(this)
-                                } catch (_: Exception) {}
-
-                                Log.d(TAG, "Received SMS modem callback. Result code: $resultCode")
-                                println("[$TAG] SMS modem callback code: $resultCode")
-
-                                when (resultCode) {
-                                    Activity.RESULT_OK -> {
-                                        Log.i(TAG, "SMS successfully transmitted over cellular network to $phone")
-                                        println("[$TAG] SUCCESS: SMS transmitted to $phone")
-                                        result.success("SUCCESS")
-                                    }
-                                    SmsManager.RESULT_ERROR_GENERIC_FAILURE -> {
-                                        val err = "Carrier SMS send failed (Check SIM balance or SMS plan)"
-                                        Log.e(TAG, err)
-                                        println("[$TAG] ERROR: $err")
-                                        result.error("GENERIC_FAILURE", err, null)
-                                    }
-                                    SmsManager.RESULT_ERROR_NO_SERVICE -> {
-                                        val err = "No cellular network service available"
-                                        Log.e(TAG, err)
-                                        println("[$TAG] ERROR: $err")
-                                        result.error("NO_SERVICE", err, null)
-                                    }
-                                    SmsManager.RESULT_ERROR_NULL_PDU -> {
-                                        val err = "Invalid SMS PDU format"
-                                        Log.e(TAG, err)
-                                        println("[$TAG] ERROR: $err")
-                                        result.error("NULL_PDU", err, null)
-                                    }
-                                    SmsManager.RESULT_ERROR_RADIO_OFF -> {
-                                        val err = "Airplane mode active or Mobile Radio turned off"
-                                        Log.e(TAG, err)
-                                        println("[$TAG] ERROR: $err")
-                                        result.error("RADIO_OFF", err, null)
-                                    }
-                                    else -> {
-                                        val detailedReason = when (resultCode) {
-                                            16 -> "ERROR_16_DEFAULT_SMS_REQUIRED"
-                                            else -> "Modem error code $resultCode"
-                                        }
-                                        Log.e(TAG, detailedReason)
-                                        println("[$TAG] EXPLICIT ERROR: $detailedReason")
-                                        result.error("MODEM_ERROR_$resultCode", detailedReason, null)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Schedule 3.5-second fallback dispatch confirmation
-                    mainHandler.postDelayed(timeoutRunnable, 3500)
-
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            registerReceiver(sentReceiver, IntentFilter(SENT_ACTION), Context.RECEIVER_EXPORTED)
-                        } else {
-                            registerReceiver(sentReceiver, IntentFilter(SENT_ACTION))
-                        }
-                    } catch (_: Exception) {
-                        try {
-                            registerReceiver(sentReceiver, IntentFilter(SENT_ACTION))
-                        } catch (_: Exception) {}
-                    }
-
+                    // Fire-and-forget: invoke the modem call and return immediately.
+                    // No sent-intent tracking, no delivery/result-code wait — the caller
+                    // only cares that the OS accepted the send request.
                     try {
                         val smsManager: SmsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             val subId = SubscriptionManager.getDefaultSmsSubscriptionId()
@@ -182,25 +82,15 @@ class MainActivity : FlutterActivity() {
 
                         // Use sendMultipartTextMessage for multi-part encoding & modem compatibility
                         val parts = smsManager.divideMessage(message)
-                        val sentIntents = ArrayList<PendingIntent>()
-                        for (i in 0 until parts.size) {
-                            sentIntents.add(sentIntent)
-                        }
-
-                        smsManager.sendMultipartTextMessage(phone, null, parts, sentIntents, null)
-                        Log.i(TAG, "sendMultipartTextMessage invoked successfully for $phone")
+                        smsManager.sendMultipartTextMessage(phone, null, parts, null, null)
+                        Log.i(TAG, "sendMultipartTextMessage invoked for $phone")
+                        println("[$TAG] FIRED: sendMultipartTextMessage invoked for $phone")
+                        result.success("SUCCESS")
                     } catch (e: Exception) {
-                        mainHandler.removeCallbacks(timeoutRunnable)
-                        if (!isResultReturned) {
-                            isResultReturned = true
-                            try {
-                                unregisterReceiver(sentReceiver)
-                            } catch (_: Exception) {}
-                            val exMsg = "Exception in sendMultipartTextMessage: ${e.localizedMessage}"
-                            Log.e(TAG, exMsg, e)
-                            println("[$TAG] EXCEPTION: $exMsg")
-                            result.error("EXCEPTION", exMsg, null)
-                        }
+                        val exMsg = "Exception in sendMultipartTextMessage: ${e.localizedMessage}"
+                        Log.e(TAG, exMsg, e)
+                        println("[$TAG] EXCEPTION: $exMsg")
+                        result.error("EXCEPTION", exMsg, null)
                     }
                 } else if (call.method == "requestDefaultSmsRole") {
                     try {

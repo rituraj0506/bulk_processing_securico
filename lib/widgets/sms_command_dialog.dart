@@ -5,14 +5,10 @@ import '../models/panel_record_model.dart';
 import '../services/sms_command_service.dart';
 import '../theme/app_colors.dart';
 
-/// Step 1 Dialog: Prompts user for a 4-digit New Admin Code
 class EnterAdminCodeDialog extends StatefulWidget {
   final int selectedCount;
 
-  const EnterAdminCodeDialog({
-    super.key,
-    required this.selectedCount,
-  });
+  const EnterAdminCodeDialog({super.key, required this.selectedCount});
 
   @override
   State<EnterAdminCodeDialog> createState() => _EnterAdminCodeDialogState();
@@ -21,10 +17,12 @@ class EnterAdminCodeDialog extends StatefulWidget {
 class _EnterAdminCodeDialogState extends State<EnterAdminCodeDialog> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
+  final _confirmCodeController = TextEditingController();
 
   @override
   void dispose() {
     _codeController.dispose();
+    _confirmCodeController.dispose();
     super.dispose();
   }
 
@@ -55,7 +53,11 @@ class _EnterAdminCodeDialogState extends State<EnterAdminCodeDialog> {
                       color: AppColors.primaryLight,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.password_rounded, color: AppColors.primary, size: 24),
+                    child: const Icon(
+                      Icons.password_rounded,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -114,14 +116,20 @@ class _EnterAdminCodeDialogState extends State<EnterAdminCodeDialog> {
                   counterText: '',
                   fillColor: AppColors.inputFill,
                   filled: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 2,
+                    ),
                   ),
                   errorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -129,7 +137,10 @@ class _EnterAdminCodeDialogState extends State<EnterAdminCodeDialog> {
                   ),
                   focusedErrorBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.error, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppColors.error,
+                      width: 2,
+                    ),
                   ),
                 ),
                 validator: (val) {
@@ -138,6 +149,73 @@ class _EnterAdminCodeDialogState extends State<EnterAdminCodeDialog> {
                   }
                   if (val.trim().length != 4) {
                     return 'Admin code must be exactly 4 digits';
+                  }
+                  return null;
+                },
+                onFieldSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: 20),
+
+              Text(
+                'Confirm New Admin Code',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              TextFormField(
+                controller: _confirmCodeController,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 8,
+                  color: AppColors.primary,
+                ),
+                decoration: InputDecoration(
+                  hintText: '••••',
+                  counterText: '',
+                  fillColor: AppColors.inputFill,
+                  filled: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 2,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppColors.error),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: AppColors.error,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Please confirm the admin code';
+                  }
+                  if (val.trim() != _codeController.text.trim()) {
+                    return 'Admin codes do not match';
                   }
                   return null;
                 },
@@ -166,7 +244,10 @@ class _EnterAdminCodeDialogState extends State<EnterAdminCodeDialog> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: _submit,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -179,7 +260,11 @@ class _EnterAdminCodeDialogState extends State<EnterAdminCodeDialog> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ],
                         ),
                       ),
@@ -225,7 +310,11 @@ class ConfirmAdminCodeDialog extends StatelessWidget {
                     color: AppColors.warningBg,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.help_outline_rounded, color: AppColors.warning, size: 26),
+                  child: const Icon(
+                    Icons.help_outline_rounded,
+                    color: AppColors.warning,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -278,7 +367,10 @@ class ConfirmAdminCodeDialog extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(8),
@@ -343,13 +435,16 @@ class ConfirmAdminCodeDialog extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => Navigator.pop(context, true),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Flexible(
                             child: Text(
-                              'Confirm & Proceed',
+                              'Proceed',
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w700,
@@ -359,7 +454,11 @@ class ConfirmAdminCodeDialog extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Icon(Icons.check_rounded, size: 18, color: Colors.white),
+                          const Icon(
+                            Icons.check_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                         ],
                       ),
                     ),
@@ -376,6 +475,9 @@ class ConfirmAdminCodeDialog extends StatelessWidget {
 
 /// Step 2 Dialog: 100% Background SMS Dispatcher with Overflow-Free Responsive Widgets
 class SmsCommandsQueueModal extends StatefulWidget {
+  /// Hard cap on how many SMS this modal will ever dispatch in one run.
+  static const int maxBatchSize = 100;
+
   final List<PanelRecord> selectedRecords;
   final String newAdminCode;
 
@@ -401,17 +503,30 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
   @override
   void initState() {
     super.initState();
-    _commandResults = widget.selectedRecords.map((record) {
+    // Defensive cap: never dispatch more than maxBatchSize in one run,
+    // regardless of how many records the caller selected.
+    final cappedRecords =
+        widget.selectedRecords.length > SmsCommandsQueueModal.maxBatchSize
+        ? widget.selectedRecords.sublist(0, SmsCommandsQueueModal.maxBatchSize)
+        : widget.selectedRecords;
+    _commandResults = cappedRecords.map((record) {
       return SmsCommandService.generateChangeAdminCodeCommand(
         record: record,
         newAdminCode: widget.newAdminCode,
       );
     }).toList();
+
+    // Auto-start sending as soon as this progress dialog opens — the user
+    // already confirmed the code change on the previous dialog.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _startBatchSmsFlow();
+    });
   }
 
   void _markSmsAsDispatchedAndMutateCode(int index) {
     final item = _commandResults[index];
     item.record.adminCode = widget.newAdminCode;
+    item.record.adminCodeUpdatedAt = DateTime.now();
 
     setState(() {
       _sentIndices.add(index);
@@ -441,7 +556,9 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
       if (_sentIndices.isNotEmpty) {
         Navigator.of(context).pop(_sentIndices.length);
       } else {
-        final firstError = _failureReasons.values.firstOrNull ?? 'Background SMS sending failed';
+        final firstError =
+            _failureReasons.values.firstOrNull ??
+            'Background SMS sending failed';
         Navigator.of(context).pop(firstError);
       }
     }
@@ -467,7 +584,10 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
     } else {
       // Background SMS send Failed - DO NOT NAVIGATE, DO NOT MUTATE CODE!
       final err = sendResult.errorMessage ?? 'Background SMS send failed';
-      final isBlockedByOS = err.contains('TIMEOUT') || err.contains('16') || sendResult.requiresSmsAppRole;
+      final isBlockedByOS =
+          err.contains('TIMEOUT') ||
+          err.contains('16') ||
+          sendResult.requiresSmsAppRole;
 
       setState(() {
         _failedIndices.add(index);
@@ -488,14 +608,16 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
   Future<void> _dispatchNextPanelInQueue() async {
     int nextIndex = -1;
     for (int i = 0; i < _commandResults.length; i++) {
-      if (_commandResults[i].isSupported && !_sentIndices.contains(i) && !_failedIndices.contains(i)) {
+      if (_commandResults[i].isSupported &&
+          !_sentIndices.contains(i) &&
+          !_failedIndices.contains(i)) {
         nextIndex = i;
         break;
       }
     }
 
     if (nextIndex != -1) {
-      await Future.delayed(const Duration(milliseconds: 400));
+      await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
       await _launchSmsForIndex(nextIndex);
     } else {
@@ -520,7 +642,6 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
 
   @override
   Widget build(BuildContext context) {
-    final supportedCount = _supportedCount;
     final progress = _progress;
     final maxModalHeight = MediaQuery.of(context).size.height * 0.85;
 
@@ -542,7 +663,11 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.sms_rounded, color: AppColors.primary, size: 26),
+                  child: const Icon(
+                    Icons.sms_rounded,
+                    color: AppColors.primary,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -550,20 +675,11 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'SMS Commands',
+                        'Sending SMS Commands',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Change Admin Code → New Code: ${widget.newAdminCode} (${_sentIndices.length}/$supportedCount sent)',
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -581,17 +697,24 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
             const SizedBox(height: 16),
 
             // Live Progress Bar Box
-            if (_sentIndices.isNotEmpty || _failedIndices.isNotEmpty || _isBatchProcessing || _isCompleting) ...[
+            if (_sentIndices.isNotEmpty ||
+                _failedIndices.isNotEmpty ||
+                _isBatchProcessing ||
+                _isCompleting) ...[
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: _isCompleting
-                      ? (_sentIndices.isNotEmpty ? AppColors.successBg : AppColors.errorBg)
+                      ? (_sentIndices.isNotEmpty
+                            ? AppColors.successBg
+                            : AppColors.errorBg)
                       : AppColors.primaryLight.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _isCompleting
-                        ? (_sentIndices.isNotEmpty ? AppColors.success : AppColors.error)
+                        ? (_sentIndices.isNotEmpty
+                              ? AppColors.success
+                              : AppColors.error)
                         : AppColors.primary.withValues(alpha: 0.3),
                   ),
                 ),
@@ -606,8 +729,12 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                             children: [
                               if (_isCompleting)
                                 Icon(
-                                  _sentIndices.isNotEmpty ? Icons.check_circle_rounded : Icons.error_rounded,
-                                  color: _sentIndices.isNotEmpty ? AppColors.success : AppColors.error,
+                                  _sentIndices.isNotEmpty
+                                      ? Icons.check_circle_rounded
+                                      : Icons.error_rounded,
+                                  color: _sentIndices.isNotEmpty
+                                      ? AppColors.success
+                                      : AppColors.error,
                                   size: 18,
                                 )
                               else
@@ -624,16 +751,18 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                                 child: Text(
                                   _isCompleting
                                       ? (_sentIndices.isNotEmpty
-                                          ? 'Background SMS Sent & Admin Code Updated! Closing in 2s...'
-                                          : 'Background SMS Dispatch Failed! Admin Code Not Updated.')
-                                      : 'Sending background SMS (${_sentIndices.length + _failedIndices.length}/$supportedCount)...',
+                                            ? 'Background SMS Sent & Admin Code Updated! Closing in 2s...'
+                                            : 'Background SMS Dispatch Failed! Admin Code Not Updated.')
+                                      : 'Sending SMS...',
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
                                     color: _isCompleting
-                                        ? (_sentIndices.isNotEmpty ? AppColors.success : AppColors.error)
+                                        ? (_sentIndices.isNotEmpty
+                                              ? AppColors.success
+                                              : AppColors.error)
                                         : AppColors.primary,
                                   ),
                                 ),
@@ -648,7 +777,9 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
                             color: _isCompleting
-                                ? (_sentIndices.isNotEmpty ? AppColors.success : AppColors.error)
+                                ? (_sentIndices.isNotEmpty
+                                      ? AppColors.success
+                                      : AppColors.error)
                                 : AppColors.primary,
                           ),
                         ),
@@ -663,7 +794,9 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                         backgroundColor: Colors.white,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           _isCompleting
-                              ? (_sentIndices.isNotEmpty ? AppColors.success : AppColors.error)
+                              ? (_sentIndices.isNotEmpty
+                                    ? AppColors.success
+                                    : AppColors.error)
                               : AppColors.primary,
                         ),
                       ),
@@ -688,7 +821,11 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.security_rounded, color: Colors.orange, size: 20),
+                        const Icon(
+                          Icons.security_rounded,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -715,16 +852,27 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade800,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                       ),
                       onPressed: _handleRequestDefaultRole,
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                      icon: const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 16,
+                      ),
                       label: Flexible(
                         child: Text(
                           'Set Default SMS App (Enable Silent Send)',
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -735,234 +883,212 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
             ],
 
             // SMS Command Item List
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: _commandResults.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 14),
-                itemBuilder: (context, index) {
-                  final item = _commandResults[index];
-                  final isSent = _sentIndices.contains(index);
-                  final isFailed = _failedIndices.contains(index);
-                  final failureReason = _failureReasons[index];
-
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isSent
-                          ? AppColors.successBg
-                          : isFailed
-                              ? AppColors.errorBg
-                              : item.isSupported
-                                  ? Colors.white
-                                  : Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSent
-                            ? AppColors.success
-                            : isFailed
-                                ? AppColors.error
-                                : item.isSupported
-                                    ? AppColors.border
-                                    : AppColors.error.withValues(alpha: 0.4),
-                        width: (isSent || isFailed) ? 1.5 : 1.0,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Panel Name & SIM Number header
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: isSent
-                                          ? AppColors.success
-                                          : isFailed
-                                              ? AppColors.error
-                                              : AppColors.primaryLight,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '#${item.record.sNo}',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: (isSent || isFailed) ? Colors.white : AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      item.record.panelName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.purple.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.phone_iphone_rounded, size: 12, color: Colors.purple),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    item.record.panelSimNumber,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.purple,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (isSent) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.success,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.check_circle_rounded, size: 13, color: Colors.white),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    '✓ Code Changed to ${widget.newAdminCode}',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ] else if (isFailed) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.error,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.cancel_rounded, size: 13, color: Colors.white),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    '❌ Failed: ${failureReason ?? "SMS send failed"}',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 10),
-
-                        // Code Change Transition wrapped in Wrap to prevent overflow
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'Current Code: ${item.currentCode}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primary),
-                            Text(
-                              'New Code: ${item.newCode}',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: isSent ? AppColors.success : AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Formatted SMS Command Box
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: item.isSupported ? AppColors.inputFill : Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: item.isSupported ? AppColors.border : AppColors.error.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: SelectableText(
-                            item.commandBody,
-                            style: GoogleFonts.firaCode(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: item.isSupported ? AppColors.primary : AppColors.error,
-                            ),
-                          ),
-                        ),
-
-                        if (item.warningNote != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            '⚠️ ${item.warningNote}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.orange.shade900,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 14),
+            // Flexible(
+            //   child: ListView.separated(
+            //     shrinkWrap: true,
+            //     itemCount: _commandResults.length,
+            //     separatorBuilder: (_, _) => const SizedBox(height: 14),
+            //     itemBuilder: (context, index) {
+            //       final item = _commandResults[index];
+            //       final isSent = _sentIndices.contains(index);
+            //       final isFailed = _failedIndices.contains(index);
+            //       final failureReason = _failureReasons[index];
+            //
+            //       return Container(
+            //         padding: const EdgeInsets.all(16),
+            //         decoration: BoxDecoration(
+            //           color: isSent
+            //               ? AppColors.successBg
+            //               : isFailed
+            //               ? AppColors.errorBg
+            //               : item.isSupported
+            //               ? Colors.white
+            //               : Colors.red.shade50,
+            //           borderRadius: BorderRadius.circular(16),
+            //           border: Border.all(
+            //             color: isSent
+            //                 ? AppColors.success
+            //                 : isFailed
+            //                 ? AppColors.error
+            //                 : item.isSupported
+            //                 ? AppColors.border
+            //                 : AppColors.error.withValues(alpha: 0.4),
+            //             width: (isSent || isFailed) ? 1.5 : 1.0,
+            //           ),
+            //         ),
+            //         child: Column(
+            //           crossAxisAlignment: CrossAxisAlignment.start,
+            //           children: [
+            //             // Panel Name & SIM Number header
+            //             Row(
+            //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //               children: [
+            //                 Expanded(
+            //                   child: Row(
+            //                     children: [
+            //                       Container(
+            //                         padding: const EdgeInsets.symmetric(
+            //                           horizontal: 8,
+            //                           vertical: 3,
+            //                         ),
+            //                         decoration: BoxDecoration(
+            //                           color: isSent
+            //                               ? AppColors.success
+            //                               : isFailed
+            //                               ? AppColors.error
+            //                               : AppColors.primaryLight,
+            //                           borderRadius: BorderRadius.circular(6),
+            //                         ),
+            //                         child: Text(
+            //                           '#${item.record.sNo}',
+            //                           style: GoogleFonts.plusJakartaSans(
+            //                             fontSize: 11,
+            //                             fontWeight: FontWeight.w800,
+            //                             color: (isSent || isFailed)
+            //                                 ? Colors.white
+            //                                 : AppColors.primary,
+            //                           ),
+            //                         ),
+            //                       ),
+            //                       const SizedBox(width: 8),
+            //                       Expanded(
+            //                         child: Text(
+            //                           item.record.panelName,
+            //                           maxLines: 1,
+            //                           overflow: TextOverflow.ellipsis,
+            //                           style: GoogleFonts.plusJakartaSans(
+            //                             fontSize: 14,
+            //                             fontWeight: FontWeight.w800,
+            //                             color: AppColors.textPrimary,
+            //                           ),
+            //                         ),
+            //                       ),
+            //                     ],
+            //                   ),
+            //                 ),
+            //                 const SizedBox(width: 8),
+            //                 Container(
+            //                   padding: const EdgeInsets.symmetric(
+            //                     horizontal: 8,
+            //                     vertical: 3,
+            //                   ),
+            //                   decoration: BoxDecoration(
+            //                     color: AppColors.primary.withValues(
+            //                       alpha: 0.12,
+            //                     ),
+            //                     borderRadius: BorderRadius.circular(6),
+            //                   ),
+            //                   child: Row(
+            //                     mainAxisSize: MainAxisSize.min,
+            //                     children: [
+            //                       const Icon(
+            //                         Icons.phone_iphone_rounded,
+            //                         size: 12,
+            //                         color: AppColors.primary,
+            //                       ),
+            //                       const SizedBox(width: 4),
+            //                       Text(
+            //                         item.record.panelSimNumber,
+            //                         style: GoogleFonts.plusJakartaSans(
+            //                           fontSize: 12,
+            //                           fontWeight: FontWeight.w700,
+            //                           color: AppColors.primary,
+            //                         ),
+            //                       ),
+            //                     ],
+            //                   ),
+            //                 ),
+            //               ],
+            //             ),
+            //             if (isSent) ...[
+            //               const SizedBox(height: 8),
+            //               Container(
+            //                 padding: const EdgeInsets.symmetric(
+            //                   horizontal: 10,
+            //                   vertical: 4,
+            //                 ),
+            //                 decoration: BoxDecoration(
+            //                   color: AppColors.success,
+            //                   borderRadius: BorderRadius.circular(8),
+            //                 ),
+            //                 child: Row(
+            //                   mainAxisSize: MainAxisSize.min,
+            //                   children: [
+            //                     const Icon(
+            //                       Icons.check_circle_rounded,
+            //                       size: 13,
+            //                       color: Colors.white,
+            //                     ),
+            //                     const SizedBox(width: 4),
+            //                     Flexible(
+            //                       child: Text(
+            //                         '✓ Code Changed to ${widget.newAdminCode}',
+            //                         overflow: TextOverflow.ellipsis,
+            //                         style: GoogleFonts.plusJakartaSans(
+            //                           fontSize: 11,
+            //                           fontWeight: FontWeight.w800,
+            //                           color: Colors.white,
+            //                         ),
+            //                       ),
+            //                     ),
+            //                   ],
+            //                 ),
+            //               ),
+            //             ] else if (isFailed) ...[
+            //               const SizedBox(height: 8),
+            //               Container(
+            //                 padding: const EdgeInsets.symmetric(
+            //                   horizontal: 10,
+            //                   vertical: 4,
+            //                 ),
+            //                 decoration: BoxDecoration(
+            //                   color: AppColors.error,
+            //                   borderRadius: BorderRadius.circular(8),
+            //                 ),
+            //                 child: Row(
+            //                   mainAxisSize: MainAxisSize.min,
+            //                   children: [
+            //                     const Icon(
+            //                       Icons.cancel_rounded,
+            //                       size: 13,
+            //                       color: Colors.white,
+            //                     ),
+            //                     const SizedBox(width: 4),
+            //                     Flexible(
+            //                       child: Text(
+            //                         '❌ Failed: ${failureReason ?? "SMS send failed"}',
+            //                         overflow: TextOverflow.ellipsis,
+            //                         style: GoogleFonts.plusJakartaSans(
+            //                           fontSize: 11,
+            //                           fontWeight: FontWeight.w800,
+            //                           color: Colors.white,
+            //                         ),
+            //                       ),
+            //                     ),
+            //                   ],
+            //                 ),
+            //               ),
+            //             ],
+            //             if (item.warningNote != null) ...[
+            //               const SizedBox(height: 6),
+            //               Text(
+            //                 '⚠️ ${item.warningNote}',
+            //                 style: GoogleFonts.plusJakartaSans(
+            //                   fontSize: 11,
+            //                   fontWeight: FontWeight.w600,
+            //                   color: Colors.orange.shade900,
+            //                 ),
+            //               ),
+            //             ],
+            //           ],
+            //         ),
+            //       );
+            //     },
+            //   ),
+            // ),
+            // const SizedBox(height: 16),
+            // const Divider(height: 1),
+            // const SizedBox(height: 14),
 
             // Clean Footer Action Bar positioned immediately below the list
             Wrap(
@@ -971,44 +1097,18 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
               runSpacing: 10,
               children: [
                 Material(
-                  color: (_isBatchProcessing || _isCompleting || supportedCount == 0)
-                      ? Colors.grey
-                      : AppColors.primary,
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: 2,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: (_isBatchProcessing || _isCompleting || supportedCount == 0)
-                        ? null
-                        : _startBatchSmsFlow,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.send_rounded, size: 16, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Send SMS ($supportedCount)',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Material(
                   color: AppColors.background,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: (_isBatchProcessing || _isCompleting) ? null : () => Navigator.pop(context),
+                    onTap: (_isBatchProcessing || _isCompleting)
+                        ? null
+                        : () => Navigator.pop(context),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Text(
                         'Close',
                         style: GoogleFonts.plusJakartaSans(

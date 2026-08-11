@@ -7,6 +7,7 @@ class PanelRecord {
   final String branch;
   String adminCode;
   final String panelType;
+  DateTime? adminCodeUpdatedAt;
 
   PanelRecord({
     required String sNo,
@@ -17,18 +18,22 @@ class PanelRecord {
     required String branch,
     required String adminCode,
     required String panelType,
-  })  : sNo = cleanNumberString(sNo),
-        panelSimNumber = cleanNumberString(panelSimNumber),
-        simImsi = cleanNumberString(simImsi),
-        zone = zone.trim(),
-        region = region.trim(),
-        branch = branch.trim(),
-        adminCode = cleanNumberString(adminCode),
-        panelType = panelType.trim();
+    this.adminCodeUpdatedAt,
+  }) : sNo = cleanNumberString(sNo),
+       panelSimNumber = cleanNumberString(panelSimNumber),
+       simImsi = cleanNumberString(simImsi),
+       zone = zone.trim(),
+       region = region.trim(),
+       branch = branch.trim(),
+       adminCode = cleanNumberString(adminCode),
+       panelType = panelType.trim();
 
   // Backward compatibility getters
-  String get panelName => branch.isNotEmpty ? '$branch ($panelType)' : (panelType.isNotEmpty ? panelType : 'Panel');
-  String get siteAddress => [branch, region, zone].where((s) => s.isNotEmpty).join(', ');
+  String get panelName => branch.isNotEmpty
+      ? '$branch ($panelType)'
+      : (panelType.isNotEmpty ? panelType : 'Panel');
+  String get siteAddress =>
+      [branch, region, zone].where((s) => s.isNotEmpty).join(', ');
 
   static String cleanNumberString(String val) {
     String str = val.trim();
@@ -73,19 +78,27 @@ class PanelRecord {
       'branch': branch,
       'adminCode': adminCode,
       'panelType': panelType,
+      'adminCodeUpdatedAt': adminCodeUpdatedAt?.toIso8601String(),
     };
   }
 
   factory PanelRecord.fromMap(Map<dynamic, dynamic> map) {
     return PanelRecord(
       sNo: cleanNumberString(map['sNo']?.toString() ?? ''),
-      panelSimNumber: cleanNumberString(map['panelSimNumber']?.toString() ?? map['simNumber']?.toString() ?? ''),
-      simImsi: cleanNumberString(map['simImsi']?.toString() ?? map['imsi']?.toString() ?? ''),
+      panelSimNumber: cleanNumberString(
+        map['panelSimNumber']?.toString() ?? map['simNumber']?.toString() ?? '',
+      ),
+      simImsi: cleanNumberString(
+        map['simImsi']?.toString() ?? map['imsi']?.toString() ?? '',
+      ),
       zone: map['zone']?.toString() ?? '',
       region: map['region']?.toString() ?? '',
       branch: map['branch']?.toString() ?? map['panelName']?.toString() ?? '',
       adminCode: cleanNumberString(map['adminCode']?.toString() ?? ''),
       panelType: map['panelType']?.toString() ?? 'A1',
+      adminCodeUpdatedAt: map['adminCodeUpdatedAt'] != null
+          ? DateTime.tryParse(map['adminCodeUpdatedAt'].toString())
+          : null,
     );
   }
 }
@@ -135,7 +148,8 @@ class ValidationResult {
       requiredFields: List<String>.from(map['requiredFields'] ?? []),
       foundFields: List<String>.from(map['foundFields'] ?? []),
       missingFields: List<String>.from(map['missingFields'] ?? []),
-      records: (map['records'] as List<dynamic>?)
+      records:
+          (map['records'] as List<dynamic>?)
               ?.map((r) => PanelRecord.fromMap(r as Map))
               .toList() ??
           [],
