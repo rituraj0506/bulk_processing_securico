@@ -24,8 +24,8 @@ class PanelListScreen extends StatefulWidget {
 class _PanelListScreenState extends State<PanelListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String? _zoneFilter;
-  String? _regionFilter;
+  final Set<String> _selectedZones = {};
+  final Set<String> _selectedRegions = {};
   final Set<PanelRecord> _selectedRecords = {};
 
   @override
@@ -62,8 +62,10 @@ class _PanelListScreenState extends State<PanelListScreen> {
           r.branch.toLowerCase().contains(q) ||
           r.panelSimNumber.toLowerCase().contains(q) ||
           r.adminCode.toLowerCase().contains(q);
-      final matchesZone = _zoneFilter == null || r.zone == _zoneFilter;
-      final matchesRegion = _regionFilter == null || r.region == _regionFilter;
+      final matchesZone =
+          _selectedZones.isEmpty || _selectedZones.contains(r.zone);
+      final matchesRegion =
+          _selectedRegions.isEmpty || _selectedRegions.contains(r.region);
       return matchesSearch && matchesZone && matchesRegion;
     }).toList();
   }
@@ -209,12 +211,170 @@ class _PanelListScreenState extends State<PanelListScreen> {
     return '$day $month ${local.year}, $hour:$minute $period';
   }
 
+  void _showMultiSelectModal({
+    required String title,
+    required List<String> options,
+    required Set<String> selectedSet,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final allSelected = options.isNotEmpty && options.every((o) => selectedSet.contains(o));
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select $title (${selectedSet.length}/${options.length})',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          setModalState(() {
+                            setState(() {
+                              if (allSelected) {
+                                selectedSet.clear();
+                              } else {
+                                selectedSet.addAll(options);
+                              }
+                            });
+                          });
+                        },
+                        icon: Icon(
+                          allSelected
+                              ? Icons.deselect_rounded
+                              : Icons.select_all_rounded,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        label: Text(
+                          allSelected ? 'Clear All' : 'Select All',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      if (selectedSet.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              setState(() {
+                                selectedSet.clear();
+                              });
+                            });
+                          },
+                          child: Text(
+                            'Reset Filter',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: options.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final item = options[index];
+                        final isChecked = selectedSet.contains(item);
+                        return CheckboxListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          title: Text(
+                            item,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          value: isChecked,
+                          activeColor: AppColors.primary,
+                          onChanged: (val) {
+                            setModalState(() {
+                              setState(() {
+                                if (val == true) {
+                                  selectedSet.add(item);
+                                } else {
+                                  selectedSet.remove(item);
+                                }
+                              });
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Apply (${selectedSet.length} Selected)',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _filterChip(String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.inputFill,
           borderRadius: BorderRadius.circular(20),
@@ -222,13 +382,22 @@ class _PanelListScreenState extends State<PanelListScreen> {
             color: isSelected ? AppColors.primary : AppColors.border,
           ),
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: isSelected ? Colors.white : AppColors.textSecondary,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected && label != 'All') ...[
+              const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -237,36 +406,94 @@ class _PanelListScreenState extends State<PanelListScreen> {
   Widget _buildFilterRow({
     required String label,
     required List<String> options,
-    required String? selected,
-    required ValueChanged<String?> onSelected,
+    required Set<String> selectedSet,
+    required VoidCallback onToggleAll,
+    required Function(String) onToggleOption,
   }) {
     if (options.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.4,
-            color: AppColors.textSecondary,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (selectedSet.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${selectedSet.length} selected',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            InkWell(
+              onTap: () => _showMultiSelectModal(
+                title: label,
+                options: options,
+                selectedSet: selectedSet,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Row(
+                  children: [
+                    Text(
+                      'Select Multiple',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_drop_down_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _filterChip('All', selected == null, () => onSelected(null)),
+              _filterChip('All', selectedSet.isEmpty, onToggleAll),
               const SizedBox(width: 8),
               ...options.map(
                 (o) => Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: _filterChip(
                     o,
-                    selected == o,
-                    () => onSelected(selected == o ? null : o),
+                    selectedSet.contains(o),
+                    () => onToggleOption(o),
                   ),
                 ),
               ),
@@ -566,15 +793,33 @@ class _PanelListScreenState extends State<PanelListScreen> {
                 _buildFilterRow(
                   label: 'ZONE',
                   options: _zones,
-                  selected: _zoneFilter,
-                  onSelected: (v) => setState(() => _zoneFilter = v),
+                  selectedSet: _selectedZones,
+                  onToggleAll: () => setState(() => _selectedZones.clear()),
+                  onToggleOption: (val) {
+                    setState(() {
+                      if (_selectedZones.contains(val)) {
+                        _selectedZones.remove(val);
+                      } else {
+                        _selectedZones.add(val);
+                      }
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
                 _buildFilterRow(
                   label: 'REGION',
                   options: _regions,
-                  selected: _regionFilter,
-                  onSelected: (v) => setState(() => _regionFilter = v),
+                  selectedSet: _selectedRegions,
+                  onToggleAll: () => setState(() => _selectedRegions.clear()),
+                  onToggleOption: (val) {
+                    setState(() {
+                      if (_selectedRegions.contains(val)) {
+                        _selectedRegions.remove(val);
+                      } else {
+                        _selectedRegions.add(val);
+                      }
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
                 Row(

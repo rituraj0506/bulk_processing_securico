@@ -21,10 +21,13 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    await Future.delayed(const Duration(milliseconds: 1800));
+    final hiveService = HiveService();
+    await Future.wait([
+      hiveService.init(),
+      Future.delayed(const Duration(milliseconds: 1800)),
+    ]);
     if (!mounted) return;
 
-    final hiveService = HiveService();
     if (hiveService.isLoggedIn()) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
@@ -46,21 +49,27 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                    width: 100,
-                    height: 100,
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: Colors.white,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 2,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        width: 3,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.insert_chart_outlined_rounded,
-                        size: 52,
-                        color: Colors.white,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/app_logo.png',
+                        fit: BoxFit.cover,
                       ),
                     ),
                   )
@@ -69,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   .fade(duration: 600.ms),
               const SizedBox(height: 24),
               Text(
-                    'Bulk Sheet Validator',
+                    'DVARA CODE-MANAGER',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,

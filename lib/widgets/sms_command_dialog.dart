@@ -751,9 +751,9 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                                 child: Text(
                                   _isCompleting
                                       ? (_sentIndices.isNotEmpty
-                                            ? 'Background SMS Sent & Admin Code Updated! Closing in 2s...'
-                                            : 'Background SMS Dispatch Failed! Admin Code Not Updated.')
-                                      : 'Sending SMS...',
+                                            ? 'Message Sent & Admin Code Updated! Closing in 2s...'
+                                            : 'Message Dispatch Failed! Admin Code Not Updated.')
+                                      : 'Sending Message...',
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                   style: GoogleFonts.plusJakartaSans(
@@ -841,7 +841,7 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Redmi MIUI / Android 10+ blocks silent background SMS. Tap below to set Bulk Processing as Default SMS App to send 100% silently!',
+                      'Redmi MIUI / Android 10+ blocks silent background SMS. Tap below to set DVARA CODE-MANAGER as Default SMS App to send 100% silently!',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 11,
                         color: Colors.orange.shade900,

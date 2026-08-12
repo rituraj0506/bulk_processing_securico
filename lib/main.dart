@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'services/hive_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Hive Local Database
-  final hiveService = HiveService();
-  await hiveService.init();
-
   runApp(const MyApp());
 }
 
@@ -19,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bulk Processing Engine',
+      title: 'DVARA CODE-MANAGER',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),

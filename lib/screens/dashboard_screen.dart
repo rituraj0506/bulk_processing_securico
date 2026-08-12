@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../models/panel_record_model.dart';
 import '../services/file_parser_service.dart';
 import '../services/hive_service.dart';
+import '../services/template_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/file_upload_zone.dart';
 import '../widgets/validation_badge.dart';
@@ -19,6 +20,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final HiveService _hiveService = HiveService();
   final FileParserService _fileParserService = FileParserService();
 
@@ -109,6 +111,200 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Refresh in case admin codes were changed while on the panel list page.
           if (mounted) setState(() {});
         });
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: Column(
+        children: [
+          // Drawer Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 48, 20, 24),
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/app_logo.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'DVARA CODE-MANAGER',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (_currentUser != null) ...[
+                  Text(
+                    'User: ${_currentUser!.username}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  Text(
+                    '📱 ${_currentUser!.mobileNumber}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Option 1: Upload File
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.cloud_upload_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
+            ),
+            title: Text(
+              'Upload Panel File',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            subtitle: Text(
+              'Import new Excel/CSV spreadsheet',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndProcessFile();
+            },
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Divider(),
+          ),
+
+          // Option 2: Export Required Fields Guide & Sample Template
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.file_download_rounded,
+                color: Colors.blue.shade700,
+                size: 22,
+              ),
+            ),
+            title: Text(
+              'Required Fields & Template',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            subtitle: Text(
+              'View guide & download sample CSV',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              TemplateService.showExportGuideDialog(context);
+            },
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Divider(),
+          ),
+
+          const Spacer(),
+
+          // Option 3: Logout
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.errorBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: AppColors.error,
+                size: 22,
+              ),
+            ),
+            title: Text(
+              'Logout',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: AppColors.error,
+              ),
+            ),
+            subtitle: Text(
+              'Sign out of account',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _logout();
+            },
+          ),
+
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
   }
 
   void _showHistoryModal() {
@@ -228,67 +424,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final hasPanelData = _panelRecords.isNotEmpty;
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildDrawer(context),
       backgroundColor: AppColors.scaffold,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.analytics_rounded,
-                color: AppColors.primary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        automaticallyImplyLeading: false,
+        title: InkWell(
+          onTap: () => _scaffoldKey.currentState?.openDrawer(),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Dashboard',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                if (_currentUser != null)
-                  Text(
-                    'Welcome, ${_currentUser!.username} (${_currentUser!.mobileNumber})',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/app_logo.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                  ),
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.menu_rounded,
+                        color: Colors.white,
+                        size: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'DVARA CODE-MANAGER',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Tap logo for menu',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 12,
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
         actions: [
-          if (hasPanelData)
-            IconButton(
-              icon: const Icon(
-                Icons.cloud_upload_rounded,
-                color: AppColors.primary,
-              ),
-              tooltip: 'Upload New File',
-              onPressed: _isProcessing ? null : _pickAndProcessFile,
-            ),
           IconButton(
             icon: const Icon(Icons.history_rounded, color: AppColors.primary),
             tooltip: 'Upload History',
             onPressed: _showHistoryModal,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-            tooltip: 'Logout',
-            onPressed: _logout,
           ),
           const SizedBox(width: 8),
         ],
