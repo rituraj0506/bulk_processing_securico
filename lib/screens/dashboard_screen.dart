@@ -76,15 +76,286 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final validationResult = await _fileParserService.parseAndValidateFile(
       file,
     );
-    await _hiveService.saveUploadHistory(validationResult);
 
     if (!mounted) return;
-    setState(() {
-      _isProcessing = false;
-      _lastValidationResult = validationResult;
-      _uploadHistory = _hiveService.getUploadHistory();
-      _panelRecords = _hiveService.getSavedPanelRecords();
-    });
+
+    if (!validationResult.isValid) {
+      await _hiveService.saveUploadHistory(validationResult);
+      if (!mounted) return;
+      setState(() {
+        _isProcessing = false;
+        _lastValidationResult = validationResult;
+        _uploadHistory = _hiveService.getUploadHistory();
+      });
+      return;
+    }
+
+    setState(() => _isProcessing = false);
+
+    // Show data accuracy confirmation popup dialog
+    final bool confirmed = await _showDataConfirmationDialog(
+      fileName: validationResult.fileName,
+      recordCount: validationResult.totalRows,
+    );
+
+    if (confirmed == true) {
+      await _hiveService.saveUploadHistory(validationResult);
+      if (!mounted) return;
+      setState(() {
+        _lastValidationResult = validationResult;
+        _uploadHistory = _hiveService.getUploadHistory();
+        _panelRecords = _hiveService.getSavedPanelRecords();
+      });
+    }
+  }
+
+  Future<bool> _showDataConfirmationDialog({
+    required String fileName,
+    required int recordCount,
+  }) async {
+    bool isConfirmed = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 12,
+              child: Container(
+                width: 460,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Top Icon Header Badge
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryDark],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.fact_check_rounded,
+                        color: Colors.white,
+                        size: 34,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Title
+                    Text(
+                      'Confirm Sheet Data',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Sub-title file summary pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.description_rounded,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '$fileName • $recordCount record${recordCount == 1 ? "" : "s"}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Interactive Checkbox Confirmation Container
+                    InkWell(
+                      onTap: () {
+                        setDialogState(() {
+                          isConfirmed = !isConfirmed;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isConfirmed
+                              ? AppColors.primaryLight.withValues(alpha: 0.5)
+                              : AppColors.scaffold,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isConfirmed
+                                ? AppColors.primary
+                                : AppColors.border,
+                            width: isConfirmed ? 1.8 : 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Checkbox(
+                              value: isConfirmed,
+                              activeColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  isConfirmed = val ?? false;
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'I have verified all spreadsheet details and confirm they are correct.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: isConfirmed
+                                          ? AppColors.primaryDark
+                                          : AppColors.textPrimary,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Ensuring data accuracy is your responsibility before saving records.',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11.5,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Action Buttons Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(color: AppColors.border),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: Text(
+                              'Re-upload',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isConfirmed
+                                  ? AppColors.primary
+                                  : Colors.grey.shade300,
+                              foregroundColor: isConfirmed
+                                  ? Colors.white
+                                  : Colors.grey.shade600,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: isConfirmed ? 2 : 0,
+                              shadowColor: AppColors.primary.withValues(
+                                alpha: 0.3,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            icon: Icon(
+                              Icons.thumb_up_alt_rounded,
+                              size: 18,
+                              color: isConfirmed
+                                  ? Colors.white
+                                  : Colors.grey.shade600,
+                            ),
+                            label: Text(
+                              'Yes, Correct',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onPressed: isConfirmed
+                                ? () => Navigator.pop(ctx, true)
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    return result ?? false;
   }
 
   Future<void> _logout() async {

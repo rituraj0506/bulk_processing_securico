@@ -122,7 +122,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: AppColors.border, width: 2),
+                                border: Border.all(
+                                  color: AppColors.border,
+                                  width: 2,
+                                ),
                                 boxShadow: const [
                                   BoxShadow(
                                     color: AppColors.premiumShadow,

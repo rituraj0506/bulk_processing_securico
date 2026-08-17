@@ -7,34 +7,67 @@ import 'package:flutter/foundation.dart';
 import '../models/panel_record_model.dart';
 
 class FileParserService {
-  // Required 8 canonical fields from Excel screenshot format
+  // Required 6 canonical fields from Excel/CSV spreadsheet format
   static const List<String> requiredCanonicalFields = [
     'S.No',
     'Sim Numbers',
-    'SIM_IMSI',
     'Zone',
     'Region',
     'Branch',
     'Admin Code',
-    'Panel Type',
   ];
 
   static String sanitizeCellValue(dynamic cellValue) {
     if (cellValue == null) return '';
 
+    dynamic val = cellValue;
+
+    // Unwrap package:excel CellValue object wrappers if present
+    if (cellValue is TextCellValue) {
+      val = cellValue.value;
+    } else if (cellValue is IntCellValue) {
+      val = cellValue.value;
+    } else if (cellValue is DoubleCellValue) {
+      val = cellValue.value;
+    } else if (cellValue is DateCellValue) {
+      val =
+          '${cellValue.year}-${cellValue.month.toString().padLeft(2, '0')}-${cellValue.day.toString().padLeft(2, '0')}';
+    } else if (cellValue is DateTimeCellValue) {
+      val =
+          '${cellValue.year}-${cellValue.month.toString().padLeft(2, '0')}-${cellValue.day.toString().padLeft(2, '0')}';
+    } else if (cellValue is BoolCellValue) {
+      val = cellValue.value;
+    } else if (cellValue is FormulaCellValue) {
+      val = cellValue.formula;
+    }
+
+    if (val == null) return '';
+
     String str = '';
-    if (cellValue is double) {
-      if (cellValue == cellValue.truncateToDouble()) {
-        return cellValue.toInt().toString();
+    if (val is double) {
+      if (val == val.truncateToDouble()) {
+        return val.toInt().toString();
       }
-      str = cellValue.toString();
+      str = val.toStringAsFixed(0);
+    } else if (val is int) {
+      return val.toString();
     } else {
-      str = cellValue.toString().trim();
+      str = val.toString().trim();
     }
 
     // Strip trailing .0 if formatted as floating point (e.g., "9876543210.0" -> "9876543210")
     if (str.endsWith('.0') && RegExp(r'^-?\d+\.0$').hasMatch(str)) {
       return str.substring(0, str.length - 2);
+    }
+
+    // Handle scientific notation formatted strings e.g. "6.202339633e+09" or "6.20234e9"
+    if (RegExp(r'^\d+(\.\d+)?[eE]\+?\d+$').hasMatch(str)) {
+      try {
+        final d = double.parse(str);
+        if (d == d.truncateToDouble()) {
+          return d.toInt().toString();
+        }
+      } catch (_) {}
     }
 
     return str;
@@ -49,67 +82,46 @@ class FileParserService {
     final norm = normalizeHeader(rawHeader);
 
     // 1. S.No matching
-    if (norm == 'sno' ||
-        norm == 'sno.' ||
-        norm == 's.no' ||
-        norm == 'sno' ||
-        norm == 'slno' ||
-        norm == 'srno' ||
-        norm == 'serialno' ||
-        norm == 'serialnumber') {
+    if (norm.contains('sno') ||
+        norm.contains('slno') ||
+        norm.contains('srno') ||
+        norm.contains('serial')) {
       return 'S.No';
     }
 
-    // 2. Sim Numbers matching
-    if (norm == 'simnumbers' ||
-        norm == 'simnumber' ||
-        norm == 'simnos' ||
-        norm == 'simno' ||
-        norm == 'panelsimnumber' ||
-        norm == 'panelsimno' ||
-        norm == 'sim') {
-      return 'Sim Numbers';
-    }
-
-    // 3. SIM_IMSI matching
-    if (norm == 'simimsi' ||
-        norm == 'sim_imsi' ||
-        norm == 'imsi' ||
-        norm == 'simimsi') {
+    // 2. SIM_IMSI matching (checked before SIM Numbers to avoid collision)
+    if (norm.contains('simimsi') || norm.contains('imsi')) {
       return 'SIM_IMSI';
     }
 
+    // 3. Sim Numbers matching
+    if (norm.contains('simnumber') ||
+        norm.contains('simno') ||
+        norm.contains('panelsim') ||
+        norm.contains('sim')) {
+      return 'Sim Numbers';
+    }
+
     // 4. Zone matching
-    if (norm == 'zone' || norm.contains('zone')) {
+    if (norm.contains('zone')) {
       return 'Zone';
     }
 
     // 5. Region matching
-    if (norm == 'region' || norm.contains('region')) {
+    if (norm.contains('region')) {
       return 'Region';
     }
 
     // 6. Branch matching
-    if (norm == 'branch' ||
-        norm == 'branchname' ||
-        norm == 'panelname' ||
-        norm.contains('branch')) {
+    if (norm.contains('branch') ||
+        norm.contains('branchname') ||
+        norm.contains('panelname')) {
       return 'Branch';
     }
 
     // 7. Admin Code matching
-    if (norm == 'admincode' ||
-        norm == 'admincode' ||
-        (norm.contains('admin') && norm.contains('code'))) {
+    if (norm.contains('admin')) {
       return 'Admin Code';
-    }
-
-    // 8. Panel Type matching
-    if (norm == 'paneltype' ||
-        norm == 'panel_type' ||
-        norm == 'panel' ||
-        norm.contains('type')) {
-      return 'Panel Type';
     }
 
     return null;
@@ -221,7 +233,8 @@ class FileParserService {
           foundFields: [],
           missingFields: requiredCanonicalFields,
           records: [],
-          errorMessage: 'Could not find a valid header row in the file.',
+          errorMessage:
+              'Uploaded spreadsheet is completely blank. Please upload a file containing valid panel data.',
         );
       }
 
@@ -242,6 +255,23 @@ class FileParserService {
       debugPrint('[FileParser] Canonical column map: $canonicalColumnIndices');
       debugPrint('[FileParser] Found canonical fields: $foundCanonicalFields');
 
+      if (foundCanonicalFields.isEmpty) {
+        debugPrint('[FileParser] ERROR: 0 matching headers found in file');
+        final message = (extension == 'xlsx' || extension == 'xls')
+            ? 'This Excel file could not be read — it appears to be corrupted or was saved by a tool that produced an invalid .xlsx structure. Please open it in Excel/Google Sheets/LibreOffice and re-save it, or export it as .csv and import that instead.'
+            : 'No recognizable column headers found in file. Please ensure your spreadsheet contains the required headers (S.No, Sim Numbers, Zone, Region, Branch, Admin Code).';
+        return ValidationResult(
+          isValid: false,
+          fileName: file.name,
+          totalRows: 0,
+          requiredFields: requiredCanonicalFields,
+          foundFields: [],
+          missingFields: requiredCanonicalFields,
+          records: [],
+          errorMessage: message,
+        );
+      }
+
       // Identify missing required fields
       final List<String> missingFields = requiredCanonicalFields
           .where((field) => !foundCanonicalFields.contains(field))
@@ -251,19 +281,20 @@ class FileParserService {
         debugPrint('[FileParser] Missing fields: $missingFields');
       }
 
-      // Extract data rows if headers matched
+      // Extract data rows & validate row content
       final List<PanelRecord> records = [];
+      final List<String> rowValidationErrors = [];
       final int dataStartRow = headerRowIndex + 1;
 
       for (int i = dataStartRow; i < rows.length; i++) {
         final row = rows[i];
+        final int rowNum = i + 1;
         if (row.every(
           (cell) => cell == null || sanitizeCellValue(cell).isEmpty,
         )) {
-          // A fully blank row marks the end of the data table; anything after
-          // (e.g. trailing notes) is not part of the dataset and is ignored.
+          // Blank row marks end of dataset
           debugPrint(
-            '[FileParser] Blank row at $i — stopping data extraction, ignoring remaining rows.',
+            '[FileParser] Blank row at $i — stopping data extraction.',
           );
           break;
         }
@@ -283,29 +314,49 @@ class FileParserService {
         final regionVal = getColValue('Region');
         final branchVal = getColValue('Branch');
         final adminVal = getColValue('Admin Code');
-        final panelTypeVal = getColValue('Panel Type');
 
-        // A row must carry the core identifying data (S.No and Sim Number) to
-        // be considered a real record; otherwise it's neglected rather than
-        // imported as a malformed entry.
-        if (sNoVal.isNotEmpty && simVal.isNotEmpty) {
-          records.add(
-            PanelRecord(
-              sNo: sNoVal,
-              panelSimNumber: simVal,
-              simImsi: imsiVal.isNotEmpty ? imsiVal : 'N/A',
-              zone: zoneVal,
-              region: regionVal,
-              branch: branchVal,
-              adminCode: adminVal,
-              panelType: panelTypeVal.isNotEmpty ? panelTypeVal : 'A1',
-            ),
-          );
-        } else {
-          debugPrint(
-            '[FileParser] Row $i skipped — missing required S.No/Sim Number data: $row',
+        // Check mandatory fields in data row
+        final List<String> missingRowFields = [];
+        if (sNoVal.isEmpty) missingRowFields.add('S.No');
+        if (simVal.isEmpty) missingRowFields.add('Sim Number');
+        if (zoneVal.isEmpty) missingRowFields.add('Zone');
+        if (regionVal.isEmpty) missingRowFields.add('Region');
+        if (branchVal.isEmpty) missingRowFields.add('Branch');
+        if (adminVal.isEmpty) missingRowFields.add('Admin Code');
+
+        final String sNoLabel = sNoVal.isNotEmpty ? ' (S.No "$sNoVal")' : '';
+
+        if (missingRowFields.isNotEmpty) {
+          rowValidationErrors.add(
+            'Row $rowNum$sNoLabel: Missing required field(s): ${missingRowFields.join(", ")}.',
           );
         }
+
+        // SIM Number format check: 10 to 13 digits, numeric only
+        if (simVal.isNotEmpty && !RegExp(r'^\d{10,13}$').hasMatch(simVal)) {
+          rowValidationErrors.add(
+            'Row $rowNum$sNoLabel: Sim Number "$simVal" must be 10 to 13 digits (numeric only).',
+          );
+        }
+
+        // Admin Code format check: 4 digits, numeric only
+        if (adminVal.isNotEmpty && !RegExp(r'^\d{4}$').hasMatch(adminVal)) {
+          rowValidationErrors.add(
+            'Row $rowNum$sNoLabel: Admin Code "$adminVal" must be exactly 4 digits (numeric only).',
+          );
+        }
+
+        records.add(
+          PanelRecord(
+            sNo: sNoVal,
+            panelSimNumber: simVal,
+            simImsi: imsiVal.isNotEmpty ? imsiVal : 'N/A',
+            zone: zoneVal,
+            region: regionVal,
+            branch: branchVal,
+            adminCode: adminVal,
+          ),
+        );
       }
 
       // Uniqueness Validation for Sim Numbers & S.No
@@ -365,15 +416,33 @@ class FileParserService {
         debugPrint('[FileParser] Duplicate errors: $duplicateErrors');
       }
 
-      final bool isValid = missingFields.isEmpty && duplicateErrors.isEmpty;
-
-      String? finalErrorMessage;
+      final List<String> allErrors = [];
       if (missingFields.isNotEmpty) {
-        finalErrorMessage =
-            'Missing required field(s): ${missingFields.join(", ")}. Please ensure your spreadsheet contains all screenshot headers (S.No, Sim Numbers, SIM_IMSI, Zone, Region, Branch, Admin Code, Panel Type).';
-      } else if (duplicateErrors.isNotEmpty) {
-        finalErrorMessage = duplicateErrors.join('\n\n');
+        allErrors.add(
+          'Missing required field(s): ${missingFields.join(", ")}. Please ensure your spreadsheet contains all required headers (S.No, Sim Numbers, Zone, Region, Branch, Admin Code).',
+        );
       }
+      if (records.isEmpty) {
+        allErrors.add(
+          'Spreadsheet contains no panel records below the header row. Please add data rows before uploading.',
+        );
+      }
+      if (duplicateErrors.isNotEmpty) {
+        allErrors.addAll(duplicateErrors);
+      }
+      if (rowValidationErrors.isNotEmpty) {
+        allErrors.addAll(rowValidationErrors);
+      }
+
+      final bool isValid =
+          missingFields.isEmpty &&
+          records.isNotEmpty &&
+          duplicateErrors.isEmpty &&
+          rowValidationErrors.isEmpty;
+
+      final String? finalErrorMessage = allErrors.isNotEmpty
+          ? allErrors.join('\n\n')
+          : null;
 
       debugPrint(
         '[FileParser] Result: isValid=$isValid, totalRows=${records.length}, errorMessage=$finalErrorMessage',
@@ -411,24 +480,116 @@ class FileParserService {
       debugPrint(
         '[FileParser] Excel decoded. Sheet names: ${excel.tables.keys.toList()}',
       );
-      List<List<dynamic>> rows = [];
+
+      List<List<dynamic>> bestRows = [];
+      int maxMatchedHeaders = -1;
+
       for (var table in excel.tables.keys) {
         final sheet = excel.tables[table];
-        debugPrint(
-          '[FileParser] Sheet "$table" row count: ${sheet?.rows.length ?? 0}',
-        );
-        if (sheet != null) {
-          for (var row in sheet.rows) {
-            final rowValues = row.map((cell) => cell?.value).toList();
-            rows.add(rowValues);
+        if (sheet == null || sheet.rows.isEmpty) continue;
+
+        final List<List<dynamic>> currentSheetRows = [];
+        int matchedHeaderCount = 0;
+
+        for (var row in sheet.rows) {
+          final rowValues = row.map((cell) => cell?.value).toList();
+          currentSheetRows.add(rowValues);
+
+          for (var cell in rowValues) {
+            final str = sanitizeCellValue(cell);
+            if (str.isNotEmpty && matchCanonicalField(str) != null) {
+              matchedHeaderCount++;
+            }
           }
         }
-        if (rows.isNotEmpty) break;
+
+        debugPrint(
+          '[FileParser] Sheet "$table": rows=${currentSheetRows.length}, matchedHeaders=$matchedHeaderCount',
+        );
+
+        if (matchedHeaderCount > maxMatchedHeaders) {
+          maxMatchedHeaders = matchedHeaderCount;
+          bestRows = currentSheetRows;
+        }
       }
-      return rows;
+
+      if (bestRows.isNotEmpty && maxMatchedHeaders > 0) {
+        return bestRows;
+      }
+
+      if (bestRows.isNotEmpty) return bestRows;
+
+      for (var table in excel.tables.keys) {
+        final sheet = excel.tables[table];
+        if (sheet != null && sheet.rows.isNotEmpty) {
+          return sheet.rows
+              .map((row) => row.map((cell) => cell?.value).toList())
+              .toList();
+        }
+      }
     } catch (e, stackTrace) {
       debugPrint('[FileParser] Excel parse EXCEPTION: $e');
       debugPrint('[FileParser] Stack trace:\n$stackTrace');
+    }
+
+    // Fallback: try parsing as HTML table or CSV text (for web-exported .xlsx files)
+    debugPrint(
+      '[FileParser] Attempting HTML/Text table fallback for Excel file...',
+    );
+    return _parseHtmlOrTextTable(bytes);
+  }
+
+  List<List<dynamic>> _parseHtmlOrTextTable(Uint8List bytes) {
+    try {
+      String content;
+      try {
+        content = utf8.decode(bytes);
+      } catch (_) {
+        content = latin1.decode(bytes);
+      }
+
+      // Check if file is actually an HTML table saved with .xlsx extension
+      if (content.toLowerCase().contains('<table') ||
+          content.toLowerCase().contains('<tr')) {
+        final List<List<dynamic>> rows = [];
+        final trRegex = RegExp(
+          r'<tr[^>]*>(.*?)<\/tr>',
+          caseSensitive: false,
+          dotAll: true,
+        );
+        final tdRegex = RegExp(
+          r'<(?:td|th)[^>]*>(.*?)<\/(?:td|th)>',
+          caseSensitive: false,
+          dotAll: true,
+        );
+
+        for (final trMatch in trRegex.allMatches(content)) {
+          final trContent = trMatch.group(1) ?? '';
+          final List<dynamic> row = [];
+          for (final tdMatch in tdRegex.allMatches(trContent)) {
+            String cell = tdMatch.group(1) ?? '';
+            cell = cell.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+            cell = cell
+                .replaceAll('&nbsp;', ' ')
+                .replaceAll('&amp;', '&')
+                .replaceAll('&lt;', '<')
+                .replaceAll('&gt;', '>')
+                .replaceAll('&quot;', '"');
+            row.add(cell.trim());
+          }
+          if (row.isNotEmpty) {
+            rows.add(row);
+          }
+        }
+        if (rows.isNotEmpty) return rows;
+      }
+
+      return const CsvToListConverter(
+        eol: '\n',
+        shouldParseNumbers: false,
+      ).convert(content);
+    } catch (e) {
+      debugPrint('HTML/CSV fallback parse error: $e');
       return [];
     }
   }

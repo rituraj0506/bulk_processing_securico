@@ -1,4 +1,4 @@
-package com.example.bulkprocessing
+package com.dvara.bulkprocessing
 
 import android.app.role.RoleManager
 import android.content.ContentValues

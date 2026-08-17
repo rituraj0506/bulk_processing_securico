@@ -223,7 +223,9 @@ class _PanelListScreenState extends State<PanelListScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final allSelected = options.isNotEmpty && options.every((o) => selectedSet.contains(o));
+            final allSelected =
+                options.isNotEmpty &&
+                options.every((o) => selectedSet.contains(o));
             return Container(
               height: MediaQuery.of(context).size.height * 0.7,
               decoration: const BoxDecoration(

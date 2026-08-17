@@ -89,18 +89,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   .animate()
                   .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 200.ms)
                   .fade(),
-              const SizedBox(height: 8),
-              Text(
-                    'Mobile Database & File Engine',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-                  )
-                  .animate()
-                  .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 400.ms)
-                  .fade(),
               const SizedBox(height: 48),
               const SizedBox(
                 width: 32,

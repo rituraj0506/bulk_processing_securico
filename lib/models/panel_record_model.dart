@@ -17,7 +17,7 @@ class PanelRecord {
     required String region,
     required String branch,
     required String adminCode,
-    required String panelType,
+    String panelType = 'A1',
     this.adminCodeUpdatedAt,
   }) : sNo = cleanNumberString(sNo),
        panelSimNumber = cleanNumberString(panelSimNumber),
