@@ -685,11 +685,6 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
                     ],
                   ),
                 ),
-                if (!_isBatchProcessing && !_isCompleting)
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(context),
-                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -1090,38 +1085,6 @@ class _SmsCommandsQueueModalState extends State<SmsCommandsQueueModal> {
             // const Divider(height: 1),
             // const SizedBox(height: 14),
 
-            // Clean Footer Action Bar positioned immediately below the list
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                Material(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: (_isBatchProcessing || _isCompleting)
-                        ? null
-                        : () => Navigator.pop(context),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Text(
-                        'Close',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

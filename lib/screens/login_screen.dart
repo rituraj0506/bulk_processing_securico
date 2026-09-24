@@ -225,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text(
                               'Register here',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 14,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                               ),
